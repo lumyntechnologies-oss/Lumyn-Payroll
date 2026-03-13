@@ -1,0 +1,308 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      Role     @default(HR_ADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Department {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  employees   Employee[]
+
+  @@map("departments")
+}
+
+model Employee {
+  id             String         @id @default(cuid())
+  employeeId     String         @unique
+  firstName      String
+  lastName       String
+  email          String         @unique
+  phone          String?
+  nationalId     String?        @unique
+  kraPin         String?        @unique
+  nssfNumber     String?
+  nhifNumber     String?
+  dateOfBirth    DateTime?
+  gender         Gender?
+  department     Department     @relation(fields: [departmentId], references: [id])
+  departmentId   String
+  jobTitle       String
+  employmentType EmploymentType @default(FULL_TIME)
+  hireDate       DateTime
+  terminatedAt   DateTime?
+  status         EmployeeStatus @default(ACTIVE)
+  basicSalary    Float
+  bankName       String?
+  bankAccount    String?
+  bankBranch     String?
+  mpesaNumber    String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  payrollEntries PayrollEntry[]
+  attendances    Attendance[]
+  leaveRequests  LeaveRequest[]
+  leaveBalances  LeaveBalance[]
+  salaryAdvances SalaryAdvance[]
+  documents      Document[]
+
+  @@map("employees")
+}
+
+model PayrollRun {
+  id          String        @id @default(cuid())
+  month       Int
+  year        Int
+  status      PayrollStatus @default(DRAFT)
+  totalGross  Float         @default(0)
+  totalTax    Float         @default(0)
+  totalNet    Float         @default(0)
+  approvedAt  DateTime?
+  disbursedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  entries PayrollEntry[]
+
+  @@unique([month, year])
+  @@map("payroll_runs")
+}
+
+model PayrollEntry {
+  id           String     @id @default(cuid())
+  payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id])
+  payrollRunId String
+  employee     Employee   @relation(fields: [employeeId], references: [id])
+  employeeId   String
+  basicSalary  Float
+  allowances   Float      @default(0)
+  deductions   Float      @default(0)
+  paye         Float      @default(0)
+  nssf         Float      @default(0)
+  shif         Float      @default(0)
+  housingLevy  Float      @default(0)
+  grossSalary  Float
+  netSalary    Float
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([payrollRunId, employeeId])
+  @@map("payroll_entries")
+}
+
+model Attendance {
+  id         String           @id @default(cuid())
+  employee   Employee         @relation(fields: [employeeId], references: [id])
+  employeeId String
+  date       DateTime         @db.Date
+  clockIn    DateTime?
+  clockOut   DateTime?
+  status     AttendanceStatus @default(ABSENT)
+  overtime   Float            @default(0)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([employeeId, date])
+  @@map("attendances")
+}
+
+model LeaveType {
+  id          String         @id @default(cuid())
+  name        String         @unique
+  totalDays   Int
+  description String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  requests    LeaveRequest[]
+  balances    LeaveBalance[]
+
+  @@map("leave_types")
+}
+
+model LeaveRequest {
+  id          String        @id @default(cuid())
+  employee    Employee      @relation(fields: [employeeId], references: [id])
+  employeeId  String
+  leaveType   LeaveType     @relation(fields: [leaveTypeId], references: [id])
+  leaveTypeId String
+  startDate   DateTime      @db.Date
+  endDate     DateTime      @db.Date
+  days        Int
+  reason      String?
+  status      RequestStatus @default(PENDING)
+  reviewedAt  DateTime?
+  reviewNote  String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@map("leave_requests")
+}
+
+model LeaveBalance {
+  id          String    @id @default(cuid())
+  employee    Employee  @relation(fields: [employeeId], references: [id])
+  employeeId  String
+  leaveType   LeaveType @relation(fields: [leaveTypeId], references: [id])
+  leaveTypeId String
+  year        Int
+  total       Int
+  used        Int       @default(0)
+  remaining   Int
+
+  @@unique([employeeId, leaveTypeId, year])
+  @@map("leave_balances")
+}
+
+model SalaryAdvance {
+  id         String        @id @default(cuid())
+  employee   Employee      @relation(fields: [employeeId], references: [id])
+  employeeId String
+  amount     Float
+  reason     String
+  status     RequestStatus @default(PENDING)
+  schedule   String?
+  reviewedAt DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@map("salary_advances")
+}
+
+model ComplianceRecord {
+  id        String           @id @default(cuid())
+  type      ComplianceType
+  month     Int
+  year      Int
+  amount    Float
+  dueDate   DateTime         @db.Date
+  filedDate DateTime?        @db.Date
+  status    ComplianceStatus @default(PENDING)
+  reference String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([type, month, year])
+  @@map("compliance_records")
+}
+
+model Document {
+  id         String       @id @default(cuid())
+  name       String
+  type       DocumentType
+  url        String
+  size       Int?
+  employee   Employee?    @relation(fields: [employeeId], references: [id])
+  employeeId String?
+  uploadedAt DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@map("documents")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@map("notifications")
+}
+
+enum Role {
+  SUPER_ADMIN
+  HR_ADMIN
+  FINANCE
+  MANAGER
+  EMPLOYEE
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  ON_LEAVE
+  SUSPENDED
+  TERMINATED
+}
+
+enum PayrollStatus {
+  DRAFT
+  APPROVED
+  DISBURSED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HALF_DAY
+  ON_LEAVE
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ComplianceType {
+  PAYE
+  NSSF
+  SHIF
+  HOUSING_LEVY
+}
+
+enum ComplianceStatus {
+  PENDING
+  FILED
+  OVERDUE
+  DUE_SOON
+}
+
+enum DocumentType {
+  CONTRACT
+  PAYSLIP
+  TAX
+  COMPLIANCE
+  POLICY
+  OTHER
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  SUCCESS
+  ERROR
+}
