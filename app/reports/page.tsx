@@ -1,170 +1,204 @@
 "use client";
 
-import { Download } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Download, FileText, Loader2 } from "lucide-react";
 import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+  LineChart, Line, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 
-const payrollSummary = [
-  { month: "Oct", gross: 4.1, net: 3.4 },
-  { month: "Nov", gross: 4.0, net: 3.3 },
-  { month: "Dec", gross: 4.3, net: 3.6 },
-  { month: "Jan", gross: 4.2, net: 3.5 },
-  { month: "Feb", gross: 4.5, net: 3.75 },
-  { month: "Mar", gross: 4.6, net: 3.82 },
-];
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-const deptCost = [
-  { dept: "Engineering", cost: 1.8 },
-  { dept: "Sales", cost: 1.2 },
-  { dept: "Finance", cost: 0.9 },
-  { dept: "HR", cost: 0.6 },
-  { dept: "Ops", cost: 0.8 },
-  { dept: "Marketing", cost: 0.7 },
-];
-
-const demographics = [
-  { name: "18-25", value: 22, color: "#3b82f6" },
-  { name: "26-35", value: 48, color: "#8b5cf6" },
-  { name: "36-45", value: 28, color: "#10b981" },
-  { name: "46+", value: 12, color: "#f59e0b" },
-];
-
-const leaveTrends = [
-  { month: "Oct", annual: 32, sick: 18, other: 8 },
-  { month: "Nov", annual: 28, sick: 22, other: 10 },
-  { month: "Dec", annual: 45, sick: 12, other: 6 },
-  { month: "Jan", annual: 20, sick: 25, other: 7 },
-  { month: "Feb", annual: 30, sick: 16, other: 9 },
-  { month: "Mar", annual: 35, sick: 14, other: 8 },
-];
-
-const reports = [
-  "Payroll Summary Report",
-  "Tax Deductions Report",
-  "Employee Demographics Report",
-  "Attendance Analytics Report",
-  "Leave Trends Report",
-  "Department Payroll Costs",
-  "Employee Turnover Report",
-];
+interface PayrollSummaryRow { month: number; year: number; totalGross: number; totalNet: number; totalTax: number }
+interface DeptCostRow { name: string; gross: number; net: number }
+interface LeaveRow { type: string; used: number; total: number }
+interface HeadcountRow { name: string; count: number; male: number; female: number }
 
 export default function ReportsPage() {
+  const year = new Date().getFullYear();
+  const [payroll, setPayroll] = useState<PayrollSummaryRow[]>([]);
+  const [deptCost, setDeptCost] = useState<DeptCostRow[]>([]);
+  const [leave, setLeave] = useState<LeaveRow[]>([]);
+  const [headcount, setHeadcount] = useState<HeadcountRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`/api/reports?type=payroll-summary&year=${year}`).then(r => r.json()),
+      fetch(`/api/reports?type=department-costs&year=${year}`).then(r => r.json()),
+      fetch(`/api/reports?type=leave-utilization`).then(r => r.json()),
+      fetch(`/api/reports?type=headcount`).then(r => r.json()),
+    ]).then(([p, d, l, h]) => {
+      if (p.success) setPayroll(p.data);
+      if (d.success) setDeptCost(d.data);
+      if (l.success) setLeave(l.data);
+      if (h.success) setHeadcount(h.data);
+      setLoading(false);
+    });
+  }, [year]);
+
+  const payrollChart = payroll.map(r => ({
+    month: MONTH_NAMES[(r.month - 1) % 12],
+    Gross: +(r.totalGross / 1000000).toFixed(2),
+    Net: +(r.totalNet / 1000000).toFixed(2),
+    Tax: +(r.totalTax / 1000000).toFixed(2),
+  }));
+
+  const deptChart = deptCost.map(d => ({
+    dept: d.name,
+    Gross: +(d.gross / 1000000).toFixed(2),
+    Net: +(d.net / 1000000).toFixed(2),
+  }));
+
+  const leaveChart = leave.map(l => ({
+    type: l.type,
+    Used: l.used,
+    Available: Math.max(0, l.total - l.used),
+  }));
+
+  const headcountChart = headcount.map(h => ({
+    dept: h.name.length > 10 ? h.name.slice(0, 10) + "…" : h.name,
+    Count: h.count,
+  }));
+
+  const isEmpty = payroll.length === 0 && deptCost.length === 0;
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Reports & Analytics</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Comprehensive HR and payroll analytics</p>
+          <p className="text-slate-500 text-sm mt-0.5">Payroll, HR, and compliance reports for {year}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm"><Download className="w-4 h-4" /> Export PDF</Button>
+          <Button variant="outline" size="sm"><FileText className="w-4 h-4" /> Export CSV</Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm">Payroll Summary (KES M)</CardTitle>
-              <Button variant="outline" size="sm"><Download className="w-3.5 h-3.5" /> Export</Button>
+      {loading ? (
+        <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+      ) : (
+        <>
+          {isEmpty && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 text-sm text-amber-700">
+              No data yet — add employees, run payroll, and record attendance to populate reports.
             </div>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={payrollSummary}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#94a3b8" }} />
-                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} />
-                <Tooltip />
-                <Line type="monotone" dataKey="gross" stroke="#3b82f6" strokeWidth={2} name="Gross" />
-                <Line type="monotone" dataKey="net" stroke="#10b981" strokeWidth={2} name="Net" />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+          )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Department Payroll Costs (KES M)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={deptCost}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="dept" tick={{ fontSize: 11, fill: "#94a3b8" }} />
-                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} />
-                <Tooltip />
-                <Bar dataKey="cost" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <Card>
+              <CardHeader><CardTitle className="text-sm">Payroll Cost Trend (KES M)</CardTitle></CardHeader>
+              <CardContent>
+                {payrollChart.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={230}>
+                    <LineChart data={payrollChart}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#94a3b8" }} />
+                      <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} />
+                      <Tooltip formatter={(v: number) => `KES ${v}M`} />
+                      <Legend />
+                      <Line type="monotone" dataKey="Gross" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="Net" stroke="#10b981" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="Tax" stroke="#ef4444" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-48 flex items-center justify-center text-slate-400 text-sm">No payroll runs yet</div>
+                )}
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Employee Age Demographics</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center gap-6">
-            <ResponsiveContainer width={160} height={160}>
-              <PieChart>
-                <Pie data={demographics} cx="50%" cy="50%" outerRadius={70} dataKey="value">
-                  {demographics.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="space-y-2">
-              {demographics.map((d) => (
-                <div key={d.name} className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} />
-                  <span className="text-sm text-slate-600">{d.name} years</span>
-                  <span className="text-sm font-medium text-slate-800 ml-auto">{d.value}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-sm">Department Payroll Cost (KES M)</CardTitle></CardHeader>
+              <CardContent>
+                {deptChart.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={230}>
+                    <BarChart data={deptChart} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis type="number" tick={{ fontSize: 11, fill: "#94a3b8" }} />
+                      <YAxis dataKey="dept" type="category" tick={{ fontSize: 11, fill: "#94a3b8" }} width={80} />
+                      <Tooltip formatter={(v: number) => `KES ${v}M`} />
+                      <Legend />
+                      <Bar dataKey="Gross" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="Net" fill="#10b981" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-48 flex items-center justify-center text-slate-400 text-sm">No department cost data yet</div>
+                )}
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Leave Trends</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={leaveTrends}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#94a3b8" }} />
-                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} />
-                <Tooltip />
-                <Bar dataKey="annual" fill="#3b82f6" stackId="a" name="Annual" />
-                <Bar dataKey="sick" fill="#f59e0b" stackId="a" name="Sick" />
-                <Bar dataKey="other" fill="#10b981" stackId="a" name="Other" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardHeader><CardTitle className="text-sm">Leave Utilization by Type</CardTitle></CardHeader>
+              <CardContent>
+                {leaveChart.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={230}>
+                    <BarChart data={leaveChart}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis dataKey="type" tick={{ fontSize: 11, fill: "#94a3b8" }} />
+                      <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="Used" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="Available" fill="#e2e8f0" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-48 flex items-center justify-center text-slate-400 text-sm">No leave data yet</div>
+                )}
+              </CardContent>
+            </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Available Reports</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {reports.map((report) => (
-              <div key={report} className="flex items-center justify-between p-3 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
-                <span className="text-sm text-slate-700 font-medium">{report}</span>
-                <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100">
-                  <Download className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            ))}
+            <Card>
+              <CardHeader><CardTitle className="text-sm">Headcount by Department</CardTitle></CardHeader>
+              <CardContent>
+                {headcountChart.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={230}>
+                    <BarChart data={headcountChart}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis dataKey="dept" tick={{ fontSize: 11, fill: "#94a3b8" }} />
+                      <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} />
+                      <Tooltip />
+                      <Bar dataKey="Count" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-48 flex items-center justify-center text-slate-400 text-sm">No employee data yet</div>
+                )}
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="text-sm">Statutory Reports — Quick Generate</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {[
+                  { title: "Payroll Register", desc: "Monthly payslip register for all employees", icon: "📄" },
+                  { title: "P9A Tax Summary", desc: "Annual employee tax deduction (KRA)", icon: "🏛️" },
+                  { title: "NSSF Returns", desc: "Monthly NSSF contribution schedule", icon: "🛡️" },
+                  { title: "SHIF Report", desc: "NHIF/SHIF deduction summary", icon: "🏥" },
+                  { title: "Housing Levy", desc: "Monthly housing levy schedule (AHF)", icon: "🏠" },
+                  { title: "Leave Summary", desc: "Leave balances and utilization report", icon: "📅" },
+                  { title: "Headcount Report", desc: "Department-wise employee headcount", icon: "👥" },
+                  { title: "Cost Analysis", desc: "Payroll cost trend by department", icon: "📊" },
+                ].map(r => (
+                  <button key={r.title}
+                    className="text-left p-4 rounded-xl bg-slate-50 hover:bg-blue-50 hover:border-blue-200 border border-transparent transition-all group">
+                    <span className="text-2xl">{r.icon}</span>
+                    <p className="text-sm font-semibold text-slate-800 mt-2 group-hover:text-blue-700">{r.title}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{r.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

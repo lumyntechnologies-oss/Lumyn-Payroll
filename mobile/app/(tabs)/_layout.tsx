@@ -3,43 +3,42 @@ import { Ionicons } from "@expo/vector-icons";
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
-const TABS = [
-  { name: "index", title: "Dashboard", icon: "grid" as IconName },
-  { name: "employees", title: "Employees", icon: "people" as IconName },
-  { name: "payroll", title: "Payroll", icon: "cash" as IconName },
-  { name: "leave", title: "Leave", icon: "calendar" as IconName },
-  { name: "profile", title: "Profile", icon: "person" as IconName },
+const TABS: { name: string; title: string; icon: IconName; activeIcon: IconName }[] = [
+  { name: "index", title: "Dashboard", icon: "grid-outline", activeIcon: "grid" },
+  { name: "employees", title: "Employees", icon: "people-outline", activeIcon: "people" },
+  { name: "payroll", title: "Payroll", icon: "cash-outline", activeIcon: "cash" },
+  { name: "leave", title: "Leave", icon: "calendar-outline", activeIcon: "calendar" },
+  { name: "profile", title: "Profile", icon: "person-outline", activeIcon: "person" },
 ];
 
 export default function TabLayout() {
   return (
     <Tabs
-      screenOptions={{
+      screenOptions={({ route }) => ({
         headerStyle: { backgroundColor: "#1e293b" },
         headerTintColor: "#fff",
-        headerTitleStyle: { fontWeight: "bold", fontSize: 18 },
+        headerTitleStyle: { fontWeight: "700" as const, fontSize: 17 },
+        headerShadowVisible: false,
         tabBarStyle: {
-          backgroundColor: "#1e293b",
-          borderTopColor: "#334155",
-          height: 60,
-          paddingBottom: 8,
+          backgroundColor: "#0f172a",
+          borderTopColor: "#1e293b",
+          borderTopWidth: 1,
+          height: 62,
+          paddingBottom: 10,
+          paddingTop: 6,
         },
         tabBarActiveTintColor: "#3b82f6",
-        tabBarInactiveTintColor: "#64748b",
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
-      }}
+        tabBarInactiveTintColor: "#475569",
+        tabBarLabelStyle: { fontSize: 10, fontWeight: "600" as const, letterSpacing: 0.2 },
+        tabBarIcon: ({ color, size, focused }) => {
+          const tab = TABS.find(t => t.name === route.name);
+          const iconName = focused ? (tab?.activeIcon ?? "grid") : (tab?.icon ?? "grid-outline");
+          return <Ionicons name={iconName} size={size - 2} color={color} />;
+        },
+      })}
     >
-      {TABS.map((tab) => (
-        <Tabs.Screen
-          key={tab.name}
-          name={tab.name}
-          options={{
-            title: tab.title,
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name={tab.icon} size={size} color={color} />
-            ),
-          }}
-        />
+      {TABS.map(tab => (
+        <Tabs.Screen key={tab.name} name={tab.name} options={{ title: tab.title }} />
       ))}
     </Tabs>
   );
