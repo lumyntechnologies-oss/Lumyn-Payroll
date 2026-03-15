@@ -1,5 +1,22 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
+import { apiFetch } from "@/constants/api";
+
+interface ProfileData {
+  name: string;
+  role: string;
+  employeeId: string;
+  department: string;
+}
+
+interface DashboardData {
+  kpi: {
+    totalEmployees: number;
+    pendingLeave: number;
+    advancesOutstanding: number;
+  };
+}
 
 interface MenuSection {
   title: string;
@@ -34,25 +51,82 @@ const SECTIONS: MenuSection[] = [
 ];
 
 export default function ProfileScreen() {
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [stats, setStats] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  async function loadData() {
+    setError(false);
+    try {
+      const [profileRes, dashboardRes] = await Promise.all([
+        apiFetch("/api/profile"),
+        apiFetch("/api/dashboard"),
+      ]);
+
+      if (profileRes.success) {
+        setProfile(profileRes.data);
+      }
+
+      if (dashboardRes.success) {
+        // Map dashboard KPIs to stats (dynamic from DB)
+        setStats([
+          { label: "Total Employees", value: dashboardRes.data.kpi.totalEmployees.toString(), icon: "people" },
+          { label: "Pending Leave", value: dashboardRes.data.kpi.pendingLeave.toString(), icon: "calendar" },
+          { label: "Outstanding Advances", value: `KES ${(dashboardRes.data.kpi.advancesOutstanding / 1000).toFixed(0)}K`, icon: "wallet" },
+        ]);
+      }
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const getInitials = (name: string) => {
+    const names = name.split(" ");
+    return (names[0]?.[0] || "") + (names[1]?.[0] || "");
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.centered, { backgroundColor: "#0f172a" }]}>
+        <ActivityIndicator size="large" color="#3b82f6" />
+      </View>
+    );
+  }
+
+  if (error || !profile) {
+    return (
+      <View style={[styles.centered, { backgroundColor: "#0f172a" }]}>
+        <Ionicons name="warning-outline" size={48} color="#f59e0b" />
+        <Text style={styles.errorText}>Failed to load profile</Text>
+        <TouchableOpacity onPress={loadData} style={styles.retryBtn}>
+          <Text style={{ color: "#fff", fontWeight: "700" }}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
       <View style={styles.profileCard}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>JN</Text>
+          <Text style={styles.avatarText}>{getInitials(profile.name)}</Text>
         </View>
         <View>
-          <Text style={styles.name}>Jane Njoroge</Text>
-          <Text style={styles.role}>HR Manager</Text>
-          <Text style={styles.company}>Lumyn Technologies Ltd</Text>
+          <Text style={styles.name}>{profile.name}</Text>
+          <Text style={styles.role}>{profile.role}</Text>
+          <Text style={styles.department}>{profile.department} · {profile.employeeId}</Text>
         </View>
       </View>
 
       <View style={styles.statsRow}>
-        {[
-          { label: "Reports Today", value: "3", icon: "document" },
-          { label: "Tasks Done", value: "12", icon: "checkmark-circle" },
-          { label: "Pending", value: "5", icon: "hourglass" },
-        ].map(stat => {
+        {stats.map(stat => {
           const Icon = stat.icon as React.ComponentProps<typeof Ionicons>["name"];
           return (
             <View key={stat.label} style={styles.statCard}>
@@ -98,12 +172,15 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0f172a" },
+  centered: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 40 },
+  errorText: { color: "#f1f5f9", fontSize: 16, fontWeight: "700", textAlign: "center" },
+  retryBtn: { backgroundColor: "#3b82f6", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
   profileCard: { flexDirection: "row", alignItems: "center", gap: 16, backgroundColor: "#1e293b", borderRadius: 20, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: "#334155" },
   avatar: { width: 60, height: 60, borderRadius: 30, backgroundColor: "#3b82f6", alignItems: "center", justifyContent: "center" },
   avatarText: { color: "#fff", fontSize: 20, fontWeight: "800" },
   name: { color: "#f1f5f9", fontSize: 18, fontWeight: "800" },
   role: { color: "#3b82f6", fontSize: 13, fontWeight: "600", marginTop: 2 },
-  company: { color: "#64748b", fontSize: 12, marginTop: 1 },
+  department: { color: "#64748b", fontSize: 12, marginTop: 1 },
   statsRow: { flexDirection: "row", gap: 8, marginBottom: 16 },
   statCard: { flex: 1, backgroundColor: "#1e293b", borderRadius: 14, padding: 12, alignItems: "center", gap: 4, borderWidth: 1, borderColor: "#334155" },
   statValue: { color: "#f1f5f9", fontSize: 20, fontWeight: "800" },
@@ -118,3 +195,4 @@ const styles = StyleSheet.create({
   menuSub: { color: "#64748b", fontSize: 11, marginTop: 1 },
   version: { color: "#334155", fontSize: 11, textAlign: "center", marginTop: 8 },
 });
+
