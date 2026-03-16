@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -19,27 +19,41 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
+  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/employees", label: "Employees", icon: Users },
-  { href: "/payroll", label: "Payroll", icon: DollarSign },
-  { href: "/attendance", label: "Attendance", icon: Clock },
-  { href: "/leave", label: "Leave Management", icon: Calendar },
-  { href: "/advances", label: "Salary Advances", icon: TrendingUp },
-  { href: "/compliance", label: "Compliance", icon: Shield },
-  { href: "/reports", label: "Reports & Analytics", icon: BarChart2 },
-  { href: "/organization", label: "Organization", icon: Building2 },
-  { href: "/documents", label: "Documents", icon: FileText },
-  { href: "/notifications", label: "Notifications", icon: Bell },
-  { href: "/settings", label: "Settings", icon: Settings },
+const allNavItems = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: [] },
+  { href: "/employees", label: "Employees", icon: Users, roles: [] },
+  { href: "/payroll", label: "Payroll", icon: DollarSign, roles: [] },
+  { href: "/attendance", label: "Attendance", icon: Clock, roles: [] },
+  { href: "/leave", label: "Leave Management", icon: Calendar, roles: [] },
+  { href: "/advances", label: "Salary Advances", icon: TrendingUp, roles: [] },
+  { href: "/compliance", label: "Compliance", icon: Shield, roles: [] },
+  { href: "/reports", label: "Reports & Analytics", icon: BarChart2, roles: [] },
+  { href: "/organization", label: "Organization", icon: Building2, roles: [] },
+  { href: "/documents", label: "Documents", icon: FileText, roles: [] },
+  { href: "/notifications", label: "Notifications", icon: Bell, roles: [] },
+  { href: "/settings", label: "Settings", icon: Settings, roles: [] },
+  { href: "/admin/users", label: "User Management", icon: UserCog, roles: ["SUPER_ADMIN", "HR_ADMIN"] },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [userRole, setUserRole] = useState<string>("");
+
+  useEffect(() => {
+    fetch("/api/profile")
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setUserRole(d.data.role); })
+      .catch(() => {});
+  }, []);
+
+  const navItems = allNavItems.filter(
+    (item) => item.roles.length === 0 || item.roles.includes(userRole)
+  );
 
   return (
     <aside
@@ -74,6 +88,7 @@ export function Sidebar() {
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href || pathname.startsWith(item.href + "/");
+          const isAdmin = item.roles.length > 0;
           return (
             <Link
               key={item.href}
@@ -82,6 +97,8 @@ export function Sidebar() {
                 "flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors mx-2 rounded-lg",
                 active
                   ? "bg-blue-600 text-white"
+                  : isAdmin
+                  ? "text-amber-400 hover:bg-slate-800 hover:text-amber-300"
                   : "text-slate-400 hover:bg-slate-800 hover:text-white"
               )}
               title={collapsed ? item.label : undefined}
@@ -92,24 +109,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-
-      <div className="p-4 border-t border-slate-700/50">
-        {!collapsed ? (
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
-              <span className="text-white text-xs font-bold">JK</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-medium truncate">Jane Kimani</p>
-              <p className="text-slate-400 text-xs truncate">HR Admin</p>
-            </div>
-          </div>
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mx-auto">
-            <span className="text-white text-xs font-bold">JK</span>
-          </div>
-        )}
-      </div>
     </aside>
   );
 }

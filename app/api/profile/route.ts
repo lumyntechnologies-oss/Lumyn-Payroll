@@ -1,32 +1,21 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import { EmployeeStatus } from "@/lib/generated/prisma";
+import { getCurrentDbUser } from "@/lib/auth";
 
 export async function GET() {
   try {
-    // Demo HR profile: first active employee from seed (Alice Nyambura - adapt to real auth later)
-    const profile = await prisma.employee.findFirst({
-      where: { status: EmployeeStatus.ACTIVE },
-      select: {
-        firstName: true,
-        lastName: true,
-        employeeId: true,
-        jobTitle: true,
-        department: { select: { name: true } },
-      },
-    });
-
-    if (!profile) {
-      return NextResponse.json({ success: false, error: "No profile found" }, { status: 404 });
+    const user = await getCurrentDbUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     return NextResponse.json({
       success: true,
       data: {
-        name: `${profile.firstName} ${profile.lastName}`,
-        role: profile.jobTitle,
-        employeeId: profile.employeeId,
-        department: profile.department.name,
+        id: user.id,
+        clerkId: user.clerkId,
+        name: user.name,
+        email: user.email,
+        role: user.role,
       },
     });
   } catch (error) {
@@ -34,4 +23,3 @@ export async function GET() {
     return NextResponse.json({ success: false, error: "Failed to load profile" }, { status: 500 });
   }
 }
-
