@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 const allNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: [] },
   { href: "/employees", label: "Employees", icon: Users, roles: [] },
+  { href: "/departments", label: "Departments", icon: Building2, roles: [] },
   { href: "/payroll", label: "Payroll", icon: DollarSign, roles: [] },
   { href: "/attendance", label: "Attendance", icon: Clock, roles: [] },
   { href: "/leave", label: "Leave Management", icon: Calendar, roles: [] },
