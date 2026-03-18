@@ -1,23 +1,14 @@
-<!-- # Lumyn-Payroll Dev Server Fix Plan Progress ✅ COMPLETE
+<!-- <!-- # Lumyn-Payroll Task Tracker
 
-## Completed Steps:
+## Current Task: Fix Prisma employee.count() error in dashboard
 
-### 1. Rename middleware.ts to proxy.ts ✅ DONE
-Deprecated middleware renamed to proxy.ts.
+**Status: In Progress**
 
-### 2. Update package.json dev script ✅ DONE
-Removed --turbopack from "dev" script.
+### Steps:
+- [x] Analyze files and create detailed edit plan
+- [x] Create TODO.md with steps
+- [x] Edit app/api/dashboard/route.ts to fix count() call
+- [x] Test the fix by restarting dev server and checking /dashboard
+- [ ] Mark task complete
 
-### 3. Clear Next.js cache ✅ DONE
-Deleted .next and node_modules/.cache.
-
-### 4. Test dev server ✅ IN PROGRESS
-Run `npm run dev` - check localhost:5000 for no errors.
-
-### 5. Verify & Cleanup ✅ PENDING
-
-**Next: Stop dev server (Ctrl+C), confirm no errors in logs, then `attempt_completion`.**
-
-**Result: Dev server should now run without Turbopack headers/auth errors!**
-
- --> -->
+**Next Step:** Finalize completion -->

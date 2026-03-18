@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
         skip,
         include: { _count: { select: { entries: true } } },
       }),
-      prisma.payrollRun.count(),
+      prisma.payrollRun.count({}),
     ]);
 
     return successResponse({ runs, pagination: { page, limit, total } });
