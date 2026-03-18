@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    const count = await prisma.employee.count({});
+    const count = await prisma.employee.count();
     const employeeId = `EMP${String(count + 1).padStart(3, "0")}`;
 
     const employee = await prisma.employee.create({

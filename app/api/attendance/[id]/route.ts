@@ -2,6 +2,21 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { successResponse, errorResponse, notFoundResponse } from "@/lib/api-helpers";
 
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const record = await prisma.attendance.findUnique({
+      where: { id },
+      include: { employee: { select: { id: true, firstName: true, lastName: true, employeeId: true, department: { select: { name: true } } } } },
+    });
+    if (!record) return notFoundResponse("Attendance record");
+    return successResponse(record);
+  } catch (error) {
+    console.error(error);
+    return errorResponse("Failed to fetch attendance record");
+  }
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;

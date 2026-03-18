@@ -106,6 +106,34 @@ export async function GET(req: NextRequest) {
         return successResponse({ byStatus, totalOvertime, totalDays: records.length });
       }
 
+      case "headcount": {
+        const depts = await prisma.department.findMany({
+          include: { employees: { select: { gender: true } } },
+        });
+        const data = depts.map(d => ({
+          name: d.name,
+          count: d.employees.length,
+          male: d.employees.filter(e => e.gender === "MALE").length,
+          female: d.employees.filter(e => e.gender === "FEMALE").length,
+        }));
+        return successResponse(data);
+      }
+
+      case "leave-utilization": {
+        const balances = await prisma.leaveBalance.findMany({
+          include: { leaveType: true },
+          where: { year },
+        });
+        const data = balances.reduce((acc: Record<string, { type: string; used: number; total: number }>, b) => {
+          const name = b.leaveType.name;
+          if (!acc[name]) acc[name] = { type: name, used: 0, total: 0 };
+          acc[name].used += b.used;
+          acc[name].total += b.total;
+          return acc;
+        }, {});
+        return successResponse(Object.values(data));
+      }
+
       default:
         return errorResponse("Unknown report type", 400);
     }

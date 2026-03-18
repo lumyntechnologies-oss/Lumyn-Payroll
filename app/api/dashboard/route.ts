@@ -16,7 +16,7 @@ export async function GET() {
       complianceRecords,
       recentNotifications,
     ] = await Promise.all([
-      prisma.employee.count({}),
+      prisma.employee.count(),
       prisma.employee.count({ where: { status: EmployeeStatus.ACTIVE } }),
       prisma.payrollRun.findFirst({
         orderBy: [{ year: "desc" }, { month: "desc" }],

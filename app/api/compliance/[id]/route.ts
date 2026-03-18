@@ -1,6 +1,18 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
-import { successResponse, errorResponse } from "@/lib/api-helpers";
+import { successResponse, errorResponse, notFoundResponse } from "@/lib/api-helpers";
+
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const record = await prisma.complianceRecord.findUnique({ where: { id } });
+    if (!record) return notFoundResponse("Compliance record");
+    return successResponse(record);
+  } catch (error) {
+    console.error(error);
+    return errorResponse("Failed to fetch compliance record");
+  }
+}
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {

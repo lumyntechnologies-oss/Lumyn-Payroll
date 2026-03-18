@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
         skip,
         include: { _count: { select: { entries: true } } },
       }),
-      prisma.payrollRun.count({}),
+      prisma.payrollRun.count(),
     ]);
 
     return successResponse({ runs, pagination: { page, limit, total } });
@@ -48,6 +48,17 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Get approved salary advances for employees
+    const advances = await prisma.salaryAdvance.findMany({
+      where: { status: "APPROVED" },
+      select: { employeeId: true, amount: true },
+    });
+
+    const advancesByEmployee = advances.reduce((acc: Record<string, number>, a) => {
+      acc[a.employeeId] = (acc[a.employeeId] ?? 0) + a.amount;
+      return acc;
+    }, {});
+
     const entries = employees.map((emp) => {
       const basic = emp.basicSalary;
       const allowances = basic * 0.2;
@@ -57,7 +68,8 @@ export async function POST(req: NextRequest) {
       const nssf = Math.min(2160, basic * 0.06);
       const shif = 500;
       const housingLevy = grossSalary * 0.015;
-      const deductions = 0;
+      const advanceDeduction = advancesByEmployee[emp.id] ?? 0;
+      const deductions = advanceDeduction;
       const netSalary = grossSalary - paye - nssf - shif - housingLevy - deductions;
 
       return {
