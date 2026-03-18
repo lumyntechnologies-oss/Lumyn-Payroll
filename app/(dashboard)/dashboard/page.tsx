@@ -92,7 +92,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
         {kpiCards.map((kpi) => {
           const Icon = kpi.icon;
           return (
@@ -114,7 +114,7 @@ export default function DashboardPage() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
         <Card>
           <CardHeader><CardTitle className="text-sm">Payroll Cost Trend (KES M)</CardTitle></CardHeader>
           <CardContent>
@@ -156,7 +156,7 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader><CardTitle className="text-sm">Leave Distribution</CardTitle></CardHeader>
-          <CardContent className="flex items-center gap-6">
+          <CardContent className="flex flex-col md:flex-row items-center gap-4 md:gap-6">
             <ResponsiveContainer width={160} height={160}>
               <PieChart>
                 <Pie data={leaveDistribution} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value">
@@ -229,7 +229,7 @@ export default function DashboardPage() {
                   <div>
                     <p className="text-sm text-slate-700 font-medium">{n.title}</p>
                     <p className="text-xs text-slate-500">{n.message}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{new Date(n.createdAt).toRelativeString ? "" : new Date(n.createdAt).toLocaleTimeString()}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{new Date(n.createdAt).toLocaleTimeString()}</p>
                   </div>
                 </div>
               ))}

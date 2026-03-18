@@ -35,11 +35,11 @@ CREATE TYPE "NotificationType" AS ENUM ('INFO', 'WARNING', 'SUCCESS', 'ERROR');
 CREATE TABLE "users" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "password" TEXT NOT NULL,
-    "role" "Role" NOT NULL DEFAULT 'HR_ADMIN',
+    "role" "Role" NOT NULL DEFAULT 'EMPLOYEE',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "clerkId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
@@ -239,8 +239,110 @@ CREATE TABLE "notifications" (
     CONSTRAINT "notifications_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "company_profiles" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "registrationNumber" TEXT NOT NULL,
+    "kraPin" TEXT NOT NULL,
+    "nssfNumber" TEXT NOT NULL,
+    "nhifNumber" TEXT NOT NULL,
+    "shilNumber" TEXT,
+    "address" TEXT NOT NULL,
+    "city" TEXT NOT NULL,
+    "country" TEXT NOT NULL,
+    "phone" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "logo" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "company_profiles_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "payroll_configs" (
+    "id" TEXT NOT NULL,
+    "paymentFrequency" TEXT NOT NULL DEFAULT 'MONTHLY',
+    "paymentDate" INTEGER NOT NULL DEFAULT 25,
+    "taxYear" INTEGER NOT NULL DEFAULT 2026,
+    "nssfContribution" DOUBLE PRECISION NOT NULL DEFAULT 6.0,
+    "nhifContribution" DOUBLE PRECISION NOT NULL DEFAULT 1.75,
+    "shilfContribution" DOUBLE PRECISION NOT NULL DEFAULT 0.5,
+    "housingLevyRate" DOUBLE PRECISION NOT NULL DEFAULT 1.5,
+    "defaultOvertime" DOUBLE PRECISION NOT NULL DEFAULT 1.5,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "payroll_configs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "leave_policies" (
+    "id" TEXT NOT NULL,
+    "annualLeaveDays" INTEGER NOT NULL DEFAULT 20,
+    "sickLeaveDays" INTEGER NOT NULL DEFAULT 10,
+    "maternityDays" INTEGER NOT NULL DEFAULT 90,
+    "paternityDays" INTEGER NOT NULL DEFAULT 7,
+    "carryoverDays" INTEGER NOT NULL DEFAULT 5,
+    "carryoverExpiry" INTEGER NOT NULL DEFAULT 12,
+    "requiresApproval" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "leave_policies_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "attendance_rules" (
+    "id" TEXT NOT NULL,
+    "workStartTime" TEXT NOT NULL DEFAULT '09:00',
+    "workEndTime" TEXT NOT NULL DEFAULT '17:00',
+    "lateThreshold" INTEGER NOT NULL DEFAULT 15,
+    "absentThreshold" INTEGER NOT NULL DEFAULT 30,
+    "overtimeMultiplier" DOUBLE PRECISION NOT NULL DEFAULT 1.5,
+    "autoMarkAttendance" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "attendance_rules_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "role_permissions" (
+    "id" TEXT NOT NULL,
+    "role" TEXT NOT NULL,
+    "resource" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+    "granted" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "role_permissions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "integrations" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT false,
+    "credentials" TEXT,
+    "apiKey" TEXT,
+    "webhookUrl" TEXT,
+    "lastSyncAt" TIMESTAMP(3),
+    "syncInterval" INTEGER NOT NULL DEFAULT 3600,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "integrations_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "users_clerkId_key" ON "users"("clerkId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "departments_name_key" ON "departments"("name");
@@ -275,14 +377,32 @@ CREATE UNIQUE INDEX "leave_balances_employeeId_leaveTypeId_year_key" ON "leave_b
 -- CreateIndex
 CREATE UNIQUE INDEX "compliance_records_type_month_year_key" ON "compliance_records"("type", "month", "year");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "company_profiles_name_key" ON "company_profiles"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "company_profiles_kraPin_key" ON "company_profiles"("kraPin");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "company_profiles_nssfNumber_key" ON "company_profiles"("nssfNumber");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "company_profiles_nhifNumber_key" ON "company_profiles"("nhifNumber");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "role_permissions_role_resource_action_key" ON "role_permissions"("role", "resource", "action");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "integrations_name_key" ON "integrations"("name");
+
 -- AddForeignKey
 ALTER TABLE "employees" ADD CONSTRAINT "employees_departmentId_fkey" FOREIGN KEY ("departmentId") REFERENCES "departments"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "payroll_entries" ADD CONSTRAINT "payroll_entries_payrollRunId_fkey" FOREIGN KEY ("payrollRunId") REFERENCES "payroll_runs"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "payroll_entries" ADD CONSTRAINT "payroll_entries_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "payroll_entries" ADD CONSTRAINT "payroll_entries_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "payroll_entries" ADD CONSTRAINT "payroll_entries_payrollRunId_fkey" FOREIGN KEY ("payrollRunId") REFERENCES "payroll_runs"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "attendances" ADD CONSTRAINT "attendances_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -227,6 +227,100 @@ model Notification {
   @@map("notifications")
 }
 
+model CompanyProfile {
+  id                 String   @id @default(cuid())
+  name               String   @unique
+  registrationNumber String
+  kraPin             String   @unique
+  nssfNumber         String   @unique
+  nhifNumber         String   @unique
+  shilNumber         String?
+  address            String
+  city               String
+  country            String
+  phone              String
+  email              String
+  logo               String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("company_profiles")
+}
+
+model PayrollConfig {
+  id                String   @id @default(cuid())
+  paymentFrequency  String   @default("MONTHLY")
+  paymentDate       Int      @default(25)
+  taxYear           Int      @default(2026)
+  nssfContribution  Float    @default(6.0)
+  nhifContribution  Float    @default(1.75)
+  shilfContribution Float    @default(0.5)
+  housingLevyRate   Float    @default(1.5)
+  defaultOvertime   Float    @default(1.5)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("payroll_configs")
+}
+
+model LeavePolicy {
+  id              String   @id @default(cuid())
+  annualLeaveDays Int      @default(20)
+  sickLeaveDays   Int      @default(10)
+  maternityDays   Int      @default(90)
+  paternityDays   Int      @default(7)
+  carryoverDays   Int      @default(5)
+  carryoverExpiry Int      @default(12)
+  requiresApproval Boolean @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("leave_policies")
+}
+
+model AttendanceRule {
+  id                 String   @id @default(cuid())
+  workStartTime      String   @default("09:00")
+  workEndTime        String   @default("17:00")
+  lateThreshold      Int      @default(15)
+  absentThreshold    Int      @default(30)
+  overtimeMultiplier Float    @default(1.5)
+  autoMarkAttendance Boolean @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("attendance_rules")
+}
+
+model RolePermission {
+  id         String   @id @default(cuid())
+  role       String
+  resource   String
+  action     String
+  granted    Boolean @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([role, resource, action])
+  @@map("role_permissions")
+}
+
+model Integration {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  type         String
+  isActive     Boolean @default(false)
+  credentials  String?
+  apiKey       String?
+  webhookUrl   String?
+  lastSyncAt   DateTime?
+  syncInterval Int      @default(3600)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("integrations")
+}
+
 enum Role {
   SUPER_ADMIN
   HR_ADMIN

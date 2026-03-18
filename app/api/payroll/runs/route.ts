@@ -32,13 +32,29 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { month, year } = body;
 
-    const existing = await prisma.payrollRun.findUnique({ where: { month_year: { month, year } } });
-    if (existing) return errorResponse("Payroll run already exists for this period", 400);
+    // Validate input
+    if (!month || !year) {
+      return errorResponse("Month and year are required", 400);
+    }
+    if (isNaN(month) || isNaN(year) || month < 1 || month > 12 || year < 2000 || year > 2100) {
+      return errorResponse("Invalid month (1-12) or year (2000-2100)", 400);
+    }
+
+    const existing = await prisma.payrollRun.findUnique({
+      where: { month_year: { month, year } },
+    });
+    if (existing) {
+      return errorResponse("Payroll run already exists for this period", 400);
+    }
 
     const employees = await prisma.employee.findMany({
       where: { status: EmployeeStatus.ACTIVE },
       select: { id: true, basicSalary: true },
     });
+
+    if (employees.length === 0) {
+      return errorResponse("No active employees found for payroll", 400);
+    }
 
     const run = await prisma.payrollRun.create({
       data: {
@@ -48,61 +64,77 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Get approved salary advances for employees
-    const advances = await prisma.salaryAdvance.findMany({
-      where: { status: "APPROVED" },
-      select: { employeeId: true, amount: true },
-    });
+    try {
+      // Get approved salary advances for employees
+      const advances = await prisma.salaryAdvance.findMany({
+        where: { status: "APPROVED" },
+        select: { employeeId: true, amount: true },
+      });
 
-    const advancesByEmployee = advances.reduce((acc: Record<string, number>, a) => {
-      acc[a.employeeId] = (acc[a.employeeId] ?? 0) + a.amount;
-      return acc;
-    }, {});
+      const advancesByEmployee = advances.reduce(
+        (acc: Record<string, number>, a) => {
+          acc[a.employeeId] = (acc[a.employeeId] ?? 0) + a.amount;
+          return acc;
+        },
+        {}
+      );
 
-    const entries = employees.map((emp) => {
-      const basic = emp.basicSalary;
-      const allowances = basic * 0.2;
-      const grossSalary = basic + allowances;
+      const entries = employees.map((emp) => {
+        const basic = Math.max(0, emp.basicSalary);
+        const allowances = basic * 0.2;
+        const grossSalary = basic + allowances;
 
-      const paye = calculatePAYE(grossSalary);
-      const nssf = Math.min(2160, basic * 0.06);
-      const shif = 500;
-      const housingLevy = grossSalary * 0.015;
-      const advanceDeduction = advancesByEmployee[emp.id] ?? 0;
-      const deductions = advanceDeduction;
-      const netSalary = grossSalary - paye - nssf - shif - housingLevy - deductions;
+        const paye = calculatePAYE(grossSalary);
+        const nssf = Math.min(2160, basic * 0.06);
+        const shif = 500;
+        const housingLevy = grossSalary * 0.015;
+        const advanceDeduction = advancesByEmployee[emp.id] ?? 0;
+        const deductions = advanceDeduction;
+        const netSalary = Math.max(0, grossSalary - paye - nssf - shif - housingLevy - deductions);
 
-      return {
-        payrollRunId: run.id,
-        employeeId: emp.id,
-        basicSalary: basic,
-        allowances,
-        deductions,
-        paye,
-        nssf,
-        shif,
-        housingLevy,
-        grossSalary,
-        netSalary,
-      };
-    });
+        return {
+          payrollRunId: run.id,
+          employeeId: emp.id,
+          basicSalary: basic,
+          allowances,
+          deductions,
+          paye,
+          nssf,
+          shif,
+          housingLevy,
+          grossSalary,
+          netSalary,
+        };
+      });
 
-    await prisma.payrollEntry.createMany({ data: entries });
+      if (entries.length === 0) {
+        throw new Error("No payroll entries could be generated");
+      }
 
-    const totalGross = entries.reduce((s, e) => s + e.grossSalary, 0);
-    const totalTax = entries.reduce((s, e) => s + e.paye + e.nssf + e.shif + e.housingLevy, 0);
-    const totalNet = entries.reduce((s, e) => s + e.netSalary, 0);
+      await prisma.payrollEntry.createMany({ data: entries });
 
-    const updatedRun = await prisma.payrollRun.update({
-      where: { id: run.id },
-      data: { totalGross, totalTax, totalNet },
-      include: { _count: { select: { entries: true } } },
-    });
+      const totalGross = entries.reduce((s, e) => s + e.grossSalary, 0);
+      const totalTax = entries.reduce((s, e) => s + e.paye + e.nssf + e.shif + e.housingLevy, 0);
+      const totalNet = entries.reduce((s, e) => s + e.netSalary, 0);
 
-    return successResponse(updatedRun, 201);
+      const updatedRun = await prisma.payrollRun.update({
+        where: { id: run.id },
+        data: { totalGross, totalTax, totalNet },
+        include: { _count: { select: { entries: true } } },
+      });
+
+      return successResponse(updatedRun, 201);
+    } catch (error) {
+      // Clean up if payroll entry creation fails
+      await prisma.payrollRun.delete({ where: { id: run.id } });
+      throw error;
+    }
   } catch (error) {
-    console.error(error);
-    return errorResponse("Failed to create payroll run");
+    console.error("Payroll creation error:", error);
+    return errorResponse(
+      error instanceof Error ? error.message : "Failed to create payroll run",
+      500
+    );
   }
 }
 

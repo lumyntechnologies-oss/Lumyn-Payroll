@@ -2,20 +2,22 @@
 
 import { Bell, Search, ChevronDown, Plus } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/app/components/ui/button";
 import { UserButton, useUser } from "@clerk/nextjs";
 
 const quickActions = [
-  "Add Employee",
-  "Run Payroll",
-  "Approve Leave",
-  "Generate Report",
+  { label: "Add Employee", href: "/employees" },
+  { label: "Run Payroll", href: "/payroll" },
+  { label: "Approve Leave", href: "/leave" },
+  { label: "Generate Report", href: "/reports" },
 ];
 
 export function TopNav() {
   const [showQuickActions, setShowQuickActions] = useState(false);
   const { user } = useUser();
   const [role, setRole] = useState<string>("");
+  const router = useRouter();
 
   useEffect(() => {
     fetch("/api/profile")
@@ -56,11 +58,14 @@ export function TopNav() {
             <div className="absolute right-0 top-10 bg-white border border-slate-200 rounded-xl shadow-lg py-1 min-w-48 z-50">
               {quickActions.map((action) => (
                 <button
-                  key={action}
+                  key={action.label}
                   className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                  onClick={() => setShowQuickActions(false)}
+                  onClick={() => {
+                    router.push(action.href);
+                    setShowQuickActions(false);
+                  }}
                 >
-                  {action}
+                  {action.label}
                 </button>
               ))}
             </div>
