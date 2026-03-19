@@ -6,13 +6,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/app/components/ui/button";
 import { UserButton, useUser } from "@clerk/nextjs";
 
-const quickActions = [
-  { label: "Add Employee", href: "/employees" },
-  { label: "Run Payroll", href: "/payroll" },
-  { label: "Approve Leave", href: "/leave" },
-  { label: "Generate Report", href: "/reports" },
-];
-
 export function TopNav() {
   const [showQuickActions, setShowQuickActions] = useState(false);
   const { user } = useUser();
@@ -25,6 +18,23 @@ export function TopNav() {
       .then((d) => { if (d.success) setRole(d.data.role); })
       .catch(() => {});
   }, []);
+
+  // Role-based quick actions
+  const getQuickActions = () => {
+    const baseActions = [
+      { label: "View Payment Methods", href: "/payment-methods", roles: ["EMPLOYEE", "MANAGER", "HR_ADMIN", "FINANCE_LEAD", "CFO", "SUPER_ADMIN"] },
+    ];
+
+    const adminActions = [
+      { label: "Add Employee", href: "/employees", roles: ["MANAGER", "HR_ADMIN", "FINANCE_LEAD", "CFO", "SUPER_ADMIN"] },
+      { label: "Run Payroll", href: "/payroll", roles: ["MANAGER", "HR_ADMIN", "FINANCE_LEAD", "CFO", "SUPER_ADMIN"] },
+      { label: "Disburse Salary", href: "/disbursement", roles: ["FINANCE_LEAD", "CFO", "SUPER_ADMIN"] },
+      { label: "Approve Leave", href: "/leave", roles: ["MANAGER", "HR_ADMIN", "FINANCE_LEAD", "CFO", "SUPER_ADMIN"] },
+      { label: "Generate Report", href: "/reports", roles: ["MANAGER", "HR_ADMIN", "FINANCE_LEAD", "CFO", "SUPER_ADMIN"] },
+    ];
+
+    return [...baseActions, ...adminActions].filter((action) => action.roles.includes(role as any));
+  };
 
   function formatRole(r: string) {
     return r.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
@@ -56,7 +66,7 @@ export function TopNav() {
           </Button>
           {showQuickActions && (
             <div className="absolute right-0 top-10 bg-white border border-slate-200 rounded-xl shadow-lg py-1 min-w-48 z-50">
-              {quickActions.map((action) => (
+              {getQuickActions().map((action) => (
                 <button
                   key={action.label}
                   className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"

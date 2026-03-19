@@ -4,53 +4,28 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
-  LayoutDashboard,
-  Users,
-  DollarSign,
-  Clock,
-  Calendar,
-  TrendingUp,
-  Shield,
-  BarChart2,
-  Building2,
-  FileText,
-  Bell,
-  Settings,
   ChevronLeft,
   ChevronRight,
   Zap,
-  UserCog,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const allNavItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: [] },
-  { href: "/employees", label: "Employees", icon: Users, roles: [] },
-  { href: "/departments", label: "Departments", icon: Building2, roles: [] },
-  { href: "/payroll", label: "Payroll", icon: DollarSign, roles: [] },
-  { href: "/attendance", label: "Attendance", icon: Clock, roles: [] },
-  { href: "/leave", label: "Leave Management", icon: Calendar, roles: [] },
-  { href: "/advances", label: "Salary Advances", icon: TrendingUp, roles: [] },
-  { href: "/compliance", label: "Compliance", icon: Shield, roles: [] },
-  { href: "/reports", label: "Reports & Analytics", icon: BarChart2, roles: [] },
-  { href: "/organization", label: "Organization", icon: Building2, roles: [] },
-  { href: "/documents", label: "Documents", icon: FileText, roles: [] },
-  { href: "/notifications", label: "Notifications", icon: Bell, roles: [] },
-  { href: "/settings", label: "Settings", icon: Settings, roles: [] },
-  { href: "/admin/users", label: "User Management", icon: UserCog, roles: ["SUPER_ADMIN", "HR_ADMIN"] },
-];
+import { useNavItems, UserRole } from "@/hooks/use-nav-items";
 
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [userRole, setUserRole] = useState<string>("");
+  const [userRole, setUserRole] = useState<UserRole | undefined>();
 
   useEffect(() => {
     fetch("/api/profile")
       .then((r) => r.json())
-      .then((d) => { if (d.success) setUserRole(d.data.role); })
+      .then((d) => { 
+        if (d.success) {
+          setUserRole(d.data.role as UserRole);
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -58,9 +33,7 @@ export function Sidebar() {
     setMobileOpen(false);
   }, [pathname]);
 
-  const navItems = allNavItems.filter(
-    (item) => item.roles.length === 0 || item.roles.includes(userRole)
-  );
+  const navItems = useNavItems(userRole);
 
   const sidebarClasses = cn(
     "flex flex-col bg-slate-900 text-slate-300 transition-all duration-300 shrink-0 fixed lg:static h-screen lg:h-auto left-0 top-0 z-40",

@@ -34,7 +34,9 @@ interface DashboardData {
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [userName, setUserName] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [userLoading, setUserLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/dashboard")
@@ -43,7 +45,19 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return (
+  useEffect(() => {
+    fetch("/api/profile")
+      .then(r => r.json())
+      .then(json => { 
+        if (json.success && json.data?.name) {
+          setUserName(json.data.name);
+        }
+      })
+      .catch(err => console.error("Failed to fetch profile:", err))
+      .finally(() => setUserLoading(false));
+  }, []);
+
+  if (loading || userLoading) return (
     <div className="flex items-center justify-center h-80">
       <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
     </div>
@@ -83,8 +97,10 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">HR Dashboard</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Welcome back, Jane. Here&apos;s what&apos;s happening today.</p>
+<h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <p className="text-slate-500 text-sm mt-0.5">
+            {userName ? `Welcome back, ${userName}.` : "Welcome back."} Here&apos;s what&apos;s happening today.
+          </p>
         </div>
         <div className="flex items-center gap-2 text-sm text-slate-500 bg-white border border-slate-200 rounded-lg px-3 py-2">
           <Clock className="w-4 h-4" />

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
+import { ComplianceStatus, ComplianceType } from "@/lib/generated/prisma";
 import { successResponse, errorResponse } from "@/lib/api-helpers";
-import { ComplianceType, ComplianceStatus } from "@/lib/generated/prisma";
 
 export async function GET(req: NextRequest) {
   try {

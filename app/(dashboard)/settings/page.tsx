@@ -1,17 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building2, DollarSign, Calendar, Clock, Shield, Zap, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
+import { User, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
+import PersonalSettings from "./personal/page";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 
 const tabs = [
-  { id: "company", label: "Company Profile", icon: Building2 },
-  { id: "payroll", label: "Payroll Configuration", icon: DollarSign },
-  { id: "leave", label: "Leave Policies", icon: Calendar },
-  { id: "attendance", label: "Attendance Rules", icon: Clock },
-  { id: "roles", label: "Roles & Permissions", icon: Shield },
-  { id: "integrations", label: "Integrations", icon: Zap },
+  { id: "personal", label: "Personal Settings", icon: User },
 ];
 
 interface CompanyData {
@@ -81,7 +77,7 @@ interface IntegrationData {
 }
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("company");
+  const [activeTab, setActiveTab] = useState("personal");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -124,25 +120,9 @@ export default function SettingsPage() {
   };
 
   const saveSettings = async (endpoint: string, data: any) => {
-    try {
-      setSaving(true);
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      const result = await response.json();
-      if (result.success) {
-        setMessage({ type: "success", text: "Settings saved successfully" });
-        loadSettings();
-      } else {
-        setMessage({ type: "error", text: result.error || "Failed to save settings" });
-      }
-    } catch (error) {
-      setMessage({ type: "error", text: "Error saving settings" });
-    } finally {
-      setSaving(false);
-    }
+    // Disabled for employee role - read-only view
+    setMessage({ type: "error", text: "Contact HR to update company settings" });
+    return;
   };
 
   const handleCompanySave = () => {
@@ -176,8 +156,8 @@ export default function SettingsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Manage system configuration and preferences</p>
+<h1 className="text-2xl font-bold text-slate-900">Settings</h1>
+        <p className="text-slate-500 text-sm mt-0.5">View company configuration and manage personal preferences</p>
       </div>
 
       {message && (
@@ -217,62 +197,10 @@ export default function SettingsPage() {
         </div>
 
         <div className="lg:col-span-4">
-          {activeTab === "company" && company && (
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Company Profile</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {[
-                    { key: "name", label: "Company Name", type: "text" },
-                    { key: "registrationNumber", label: "Registration Number", type: "text" },
-                    { key: "kraPin", label: "KRA PIN", type: "text" },
-                    { key: "nssfNumber", label: "NSSF Number", type: "text" },
-                    { key: "nhifNumber", label: "NHIF Number", type: "text" },
-                    { key: "shilNumber", label: "SHIL Number", type: "text" },
-                    { key: "phone", label: "Phone", type: "tel" },
-                    { key: "email", label: "Email", type: "email" },
-                  ].map((field) => (
-                    <div key={field.key}>
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{field.label}</label>
-                      <input
-                        type={field.type}
-                        value={company[field.key as keyof CompanyData] || ""}
-                        onChange={(e) => setCompany({ ...company, [field.key]: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  ))}
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Address</label>
-                    <input
-                      type="text"
-                      value={company.address}
-                      onChange={(e) => setCompany({ ...company, address: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">City</label>
-                    <input
-                      type="text"
-                      value={company.city}
-                      onChange={(e) => setCompany({ ...company, city: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Country</label>
-                    <input
-                      type="text"
-                      value={company.country}
-                      onChange={(e) => setCompany({ ...company, country: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                <Button onClick={handleCompanySave} disabled={saving}>{saving ? "Saving..." : "Save Changes"}</Button>
-              </CardContent>
-            </Card>
+          {activeTab === "personal" && (
+            <div>
+              <PersonalSettings />
+            </div>
           )}
 
           {activeTab === "payroll" && payroll && (

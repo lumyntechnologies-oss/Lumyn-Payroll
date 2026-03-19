@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
-import { successResponse, errorResponse } from "@/lib/api-helpers";
 import { EmployeeStatus } from "@/lib/generated/prisma";
+import { successResponse, errorResponse } from "@/lib/api-helpers";
 
 export async function GET(req: NextRequest) {
   try {

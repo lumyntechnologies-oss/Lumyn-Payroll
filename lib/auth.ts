@@ -1,6 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
-import { Role } from "@/lib/generated/prisma";
+
+import { Role } from "@/lib/rbac";
 
 export async function getCurrentDbUser() {
   const { userId } = await auth();
@@ -13,7 +14,7 @@ export async function getCurrentDbUser() {
     if (!clerkUser) return null;
 
     const superAdminId = process.env.SUPER_ADMIN_CLERK_ID;
-    const role: Role = superAdminId && userId === superAdminId ? Role.SUPER_ADMIN : Role.EMPLOYEE;
+    const role: Role = superAdminId && userId === superAdminId ? "SUPER_ADMIN" : "EMPLOYEE";
 
     user = await prisma.user.create({
       data: {
@@ -26,10 +27,10 @@ export async function getCurrentDbUser() {
   }
 
   const superAdminId = process.env.SUPER_ADMIN_CLERK_ID;
-  if (superAdminId && userId === superAdminId && user.role !== Role.SUPER_ADMIN) {
+  if (superAdminId && userId === superAdminId && user.role !== "SUPER_ADMIN") {
     user = await prisma.user.update({
       where: { clerkId: userId },
-      data: { role: Role.SUPER_ADMIN },
+      data: { role: "SUPER_ADMIN" },
     });
   }
 

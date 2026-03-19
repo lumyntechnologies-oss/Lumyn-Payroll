@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { EmployeeStatus, RequestStatus, ComplianceStatus } from "@/lib/generated/prisma";
+import { ComplianceStatus, EmployeeStatus } from "@/lib/generated/prisma";
 
 export async function GET() {
   try {
@@ -18,9 +18,9 @@ export async function GET() {
         orderBy: [{ year: "desc" }, { month: "desc" }],
         select: { month: true, year: true, totalGross: true, totalNet: true },
       }),
-      prisma.leaveRequest.count({ where: { status: RequestStatus.PENDING } }),
+      prisma.leaveRequest.count({ where: { status: "PENDING" } }),
       prisma.salaryAdvance.aggregate({
-        where: { status: RequestStatus.APPROVED },
+        where: { status: "APPROVED" },
         _sum: { amount: true },
       }),
     ]);
@@ -28,7 +28,7 @@ export async function GET() {
     const [complianceRecords, recentNotifications] = await Promise.all([
       prisma.complianceRecord.findMany({
         where: {
-          status: { in: [ComplianceStatus.PENDING, ComplianceStatus.DUE_SOON, ComplianceStatus.OVERDUE] },
+          status: { in: ["PENDING", "DUE_SOON", "OVERDUE"] },
         },
         orderBy: { dueDate: "asc" },
         take: 10,
