@@ -41,6 +41,8 @@ export default function PayrollPage() {
   const [loading, setLoading] = useState(true);
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [running, setRunning] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<PayrollEntry | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     fetch("/api/payroll/runs").then(r => r.json()).then(j => {
@@ -91,6 +93,30 @@ export default function PayrollPage() {
     }
   }
 
+  async function exportPayroll(format: "csv" | "json") {
+    if (!selectedRun) return;
+    setExporting(true);
+    try {
+      const url = `/api/payroll/export?payrollRunId=${selectedRun.id}&format=${format}`;
+      const response = await fetch(url);
+      if (response.ok) {
+        const blob = await response.blob();
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = `payroll_${selectedRun.month}_${selectedRun.year}.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+      }
+    } catch (error) {
+      console.error("Export error:", error);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   if (loading) return (
     <div className="flex items-center justify-center h-80"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
   );
@@ -104,10 +130,31 @@ export default function PayrollPage() {
             {selectedRun ? `${MONTH_NAMES[selectedRun.month - 1]} ${selectedRun.year} Payroll` : "No payroll run selected"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {selectedRun && <Badge variant={STATUS_VARIANT[selectedRun.status]}>{selectedRun.status}</Badge>}
-          <Button variant="outline" size="sm"><Eye className="w-4 h-4" /> Preview Payslips</Button>
-          <Button variant="outline" size="sm"><Download className="w-4 h-4" /> Export</Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setSelectedEntry(entries.length > 0 ? entries[0] : null)}
+          >
+            <Eye className="w-4 h-4" /> Preview
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => exportPayroll("csv")}
+            disabled={exporting || !selectedRun}
+          >
+            <Download className="w-4 h-4" /> {exporting ? "Exporting..." : "CSV"}
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => exportPayroll("json")}
+            disabled={exporting || !selectedRun}
+          >
+            <Download className="w-4 h-4" /> JSON
+          </Button>
           {selectedRun?.status === "DRAFT" && (
             <Button variant="outline" size="sm" onClick={approveRun}><CheckCircle className="w-4 h-4" /> Approve</Button>
           )}
@@ -204,6 +251,133 @@ export default function PayrollPage() {
           </Card>
         </>
       )}
+
+      {selectedEntry && selectedRun && (
+        <PayslipPreview
+          entry={selectedEntry}
+          payrollRun={selectedRun}
+          onClose={() => setSelectedEntry(null)}
+          entries={entries}
+          onNavigate={(entry) => setSelectedEntry(entry)}
+        />
+      )}
+    </div>
+  );
+}
+
+function PayslipPreview({
+  entry,
+  payrollRun,
+  onClose,
+  entries,
+  onNavigate,
+}: {
+  entry: PayrollEntry;
+  payrollRun: PayrollRun;
+  onClose: () => void;
+  entries: PayrollEntry[];
+  onNavigate: (entry: PayrollEntry) => void;
+}) {
+  const currentIndex = entries.findIndex((e) => e.id === entry.id);
+  const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-2xl">
+        <div className="flex items-center justify-between p-6 border-b border-slate-200">
+          <h2 className="text-lg font-bold text-slate-900">Payslip Preview</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="p-8 bg-white max-h-[80vh] overflow-y-auto">
+          <div className="text-center mb-8">
+            <h3 className="text-xl font-bold text-slate-900">Payslip</h3>
+            <p className="text-sm text-slate-600">{MONTH_NAMES[payrollRun.month - 1]} {payrollRun.year}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-8 mb-8">
+            <div>
+              <p className="text-xs text-slate-600 font-semibold mb-1">EMPLOYEE</p>
+              <p className="text-sm font-semibold text-slate-900">{entry.employee.firstName} {entry.employee.lastName}</p>
+              <p className="text-xs text-slate-600">{entry.employee.department.name}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-600 font-semibold mb-1">PERIOD</p>
+              <p className="text-sm font-semibold text-slate-900">{MONTH_NAMES[payrollRun.month - 1]} {payrollRun.year}</p>
+            </div>
+          </div>
+
+          <table className="w-full mb-8 text-sm">
+            <tbody className="divide-y divide-slate-200">
+              <tr>
+                <td className="py-2 text-slate-600">Basic Salary</td>
+                <td className="py-2 text-right font-semibold">KES {entry.basicSalary.toLocaleString()}</td>
+              </tr>
+              <tr>
+                <td className="py-2 text-slate-600">Allowances</td>
+                <td className="py-2 text-right font-semibold">KES {entry.allowances.toLocaleString()}</td>
+              </tr>
+              <tr className="bg-slate-50">
+                <td className="py-2 font-semibold text-slate-900">Gross Salary</td>
+                <td className="py-2 text-right font-bold text-slate-900">KES {entry.grossSalary.toLocaleString()}</td>
+              </tr>
+              <tr>
+                <td className="py-3 text-slate-600">PAYE Tax</td>
+                <td className="py-3 text-right">-KES {entry.paye.toLocaleString()}</td>
+              </tr>
+              <tr>
+                <td className="py-3 text-slate-600">NSSF</td>
+                <td className="py-3 text-right">-KES {entry.nssf.toLocaleString()}</td>
+              </tr>
+              <tr>
+                <td className="py-3 text-slate-600">NHIF</td>
+                <td className="py-3 text-right">-KES {entry.shif.toLocaleString()}</td>
+              </tr>
+              <tr>
+                <td className="py-3 text-slate-600">Housing Levy</td>
+                <td className="py-3 text-right">-KES {entry.housingLevy.toLocaleString()}</td>
+              </tr>
+              {entry.deductions > 0 && (
+                <tr>
+                  <td className="py-3 text-slate-600">Other Deductions</td>
+                  <td className="py-3 text-right">-KES {entry.deductions.toLocaleString()}</td>
+                </tr>
+              )}
+              <tr className="bg-green-50">
+                <td className="py-3 font-bold text-slate-900">Net Salary</td>
+                <td className="py-3 text-right font-bold text-green-700">KES {entry.netSalary.toLocaleString()}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div className="flex items-center justify-between pt-6 border-t border-slate-200">
+            <div className="flex gap-2">
+              <button
+                onClick={() => currentIndex > 0 && onNavigate(entries[currentIndex - 1])}
+                disabled={currentIndex <= 0}
+                className="px-3 py-1 text-sm rounded-lg bg-slate-100 text-slate-600 disabled:opacity-50 hover:bg-slate-200"
+              >
+                Previous
+              </button>
+              <span className="px-3 py-1 text-sm text-slate-600">
+                {currentIndex + 1} of {entries.length}
+              </span>
+              <button
+                onClick={() => currentIndex < entries.length - 1 && onNavigate(entries[currentIndex + 1])}
+                disabled={currentIndex >= entries.length - 1}
+                className="px-3 py-1 text-sm rounded-lg bg-slate-100 text-slate-600 disabled:opacity-50 hover:bg-slate-200"
+              >
+                Next
+              </button>
+            </div>
+            <Button onClick={onClose}>Close</Button>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }

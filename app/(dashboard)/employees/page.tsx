@@ -39,6 +39,8 @@ export default function EmployeesPage() {
   const [deptFilter, setDeptFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
 
   const fetchEmployees = useCallback(async () => {
     setLoading(true);
@@ -134,7 +136,45 @@ export default function EmployeesPage() {
                   <td className="px-5 py-3.5"><Badge variant={TYPE_VARIANT[emp.employmentType] ?? "secondary"}>{emp.employmentType.replace("_", " ")}</Badge></td>
                   <td className="px-5 py-3.5 text-sm text-slate-600">{new Date(emp.hireDate).toLocaleDateString()}</td>
                   <td className="px-5 py-3.5"><Badge variant={STATUS_VARIANT[emp.status] ?? "secondary"}>{emp.status.replace("_", " ")}</Badge></td>
-                  <td className="px-5 py-3.5"><button className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"><MoreHorizontal className="w-4 h-4 text-slate-400" /></button></td>
+                  <td className="px-5 py-3.5 relative">
+                    <button
+                      onClick={() => setShowActionMenu(showActionMenu === emp.id ? null : emp.id)}
+                      className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
+                    >
+                      <MoreHorizontal className="w-4 h-4 text-slate-400" />
+                    </button>
+                    {showActionMenu === emp.id && (
+                      <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 w-40 z-40">
+                        <button
+                          onClick={() => {
+                            setSelectedEmployee(emp);
+                            setShowActionMenu(null);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                        >
+                          View Profile
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedEmployee(emp);
+                            setShowActionMenu(null);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                        >
+                          Edit Details
+                        </button>
+                        <hr className="my-1" />
+                        <button
+                          className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                        >
+                          {emp.status === "ACTIVE" ? "Suspend" : "Activate"}
+                        </button>
+                        <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                          Terminate
+                        </button>
+                      </div>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -152,6 +192,15 @@ export default function EmployeesPage() {
 
       {showAddModal && (
         <AddEmployeeModal departments={departments} onClose={() => setShowAddModal(false)} onSaved={fetchEmployees} />
+      )}
+
+      {selectedEmployee && (
+        <EmployeeProfileModal
+          employee={selectedEmployee}
+          departments={departments}
+          onClose={() => setSelectedEmployee(null)}
+          onSaved={fetchEmployees}
+        />
       )}
     </div>
   );
@@ -215,6 +264,55 @@ function AddEmployeeModal({ departments, onClose, onSaved }: { departments: Depa
             <Button type="submit" className="flex-1" disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add Employee"}</Button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function EmployeeProfileModal({ employee, departments, onClose, onSaved }: { employee: Employee, departments: Department[], onClose: () => void, onSaved: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white">
+          <h2 className="text-base font-bold text-slate-900">Employee Profile</h2>
+          <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-500" /></button>
+        </div>
+        <div className="p-5">
+          <div className="flex items-start gap-6 mb-6">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center shrink-0">
+              <span className="text-white text-2xl font-bold">{employee.firstName[0]}{employee.lastName[0]}</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-slate-900">{employee.firstName} {employee.lastName}</h3>
+              <p className="text-sm text-slate-600 mt-1">{employee.email}</p>
+              <div className="flex gap-3 mt-3">
+                <Badge variant={STATUS_VARIANT[employee.status] ?? "secondary"}>{employee.status.replace("_", " ")}</Badge>
+                <Badge variant={TYPE_VARIANT[employee.employmentType] ?? "secondary"}>{employee.employmentType.replace("_", " ")}</Badge>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="text-sm font-semibold text-slate-900 mb-3">Employee Information</h4>
+              <div className="space-y-2">
+                <div><p className="text-xs text-slate-500">Employee ID</p><p className="text-sm font-mono text-blue-600">{employee.employeeId}</p></div>
+                <div><p className="text-xs text-slate-500">Department</p><p className="text-sm text-slate-900">{employee.department.name}</p></div>
+                <div><p className="text-xs text-slate-500">Job Title</p><p className="text-sm text-slate-900">{employee.jobTitle}</p></div>
+                <div><p className="text-xs text-slate-500">Hire Date</p><p className="text-sm text-slate-900">{new Date(employee.hireDate).toLocaleDateString()}</p></div>
+              </div>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-slate-900 mb-3">Actions</h4>
+              <div className="space-y-2">
+                <Button variant="outline" className="w-full justify-start text-left">View Leave Requests</Button>
+                <Button variant="outline" className="w-full justify-start text-left">View Payslips</Button>
+                <Button variant="outline" className="w-full justify-start text-left">View Attendance</Button>
+                <Button variant="outline" className="w-full justify-start text-left">Download Profile</Button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

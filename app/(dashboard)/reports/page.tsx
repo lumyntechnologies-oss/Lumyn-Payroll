@@ -23,6 +23,7 @@ export default function ReportsPage() {
   const [leave, setLeave] = useState<LeaveRow[]>([]);
   const [headcount, setHeadcount] = useState<HeadcountRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -65,16 +66,60 @@ export default function ReportsPage() {
 
   const isEmpty = payroll.length === 0 && deptCost.length === 0;
 
+  const exportReports = async (format: "csv" | "pdf") => {
+    setExporting(true);
+    try {
+      const csv = generateCSV();
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `reports-${year}.${format}`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Export error:", error);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const generateCSV = () => {
+    let csv = "PAYROLL REPORT\n";
+    csv += `Year: ${year}\n\n`;
+    csv += "Month,Gross Salary,Net Salary,Tax\n";
+    payroll.forEach((r) => {
+      csv += `${MONTH_NAMES[r.month - 1]},${r.totalGross},${r.totalNet},${r.totalTax}\n`;
+    });
+    csv += "\n\nDEPARTMENT COSTS\n";
+    csv += "Department,Gross,Net\n";
+    deptCost.forEach((d) => {
+      csv += `${d.name},${d.gross},${d.net}\n`;
+    });
+    csv += "\n\nLEAVE UTILIZATION\n";
+    csv += "Leave Type,Used,Total\n";
+    leave.forEach((l) => {
+      csv += `${l.type},${l.used},${l.total}\n`;
+    });
+    return csv;
+  };
+
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Reports & Analytics</h1>
           <p className="text-slate-500 text-sm mt-0.5">Payroll, HR, and compliance reports for {year}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm"><Download className="w-4 h-4" /> Export PDF</Button>
-          <Button variant="outline" size="sm"><FileText className="w-4 h-4" /> Export CSV</Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => exportReports("csv")} disabled={exporting}>
+            <Download className="w-4 h-4" /> {exporting ? "Exporting..." : "Export CSV"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => exportReports("pdf")} disabled={exporting}>
+            <FileText className="w-4 h-4" /> {exporting ? "Exporting..." : "Export PDF"}
+          </Button>
         </div>
       </div>
 
