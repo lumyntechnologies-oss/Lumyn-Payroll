@@ -1,8 +1,11 @@
 import type { NextConfig } from "next";
 
+const devDomain = process.env.REPLIT_DEV_DOMAIN;
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["*"],
+  allowedDevOrigins: devDomain
+    ? [devDomain, `*.${devDomain}`, "*.riker.replit.dev", "*.replit.dev"]
+    : ["*"],
   devIndicators: false,
   async headers() {
     return [
