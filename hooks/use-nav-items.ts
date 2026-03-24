@@ -41,7 +41,8 @@ export function useNavItems(userRole?: UserRole): NavItem[] {
       { href: "/settings", label: "Settings", icon: Settings, roles: [] },
 
       // Employee items
-      { href: "/payment-methods", label: "Payment Methods", icon: CreditCard, roles: [] },
+{ href: "/payment-methods", label: "Payment Methods", icon: CreditCard, roles: [] },
+      { href: "/wallet", label: "Wallet", icon: DollarSign, roles: [] },
 
       // Manager & above
       { href: "/employees", label: "Employees", icon: Users, roles: ["MANAGER", "HR_ADMIN", "FINANCE_LEAD", "CFO", "SUPER_ADMIN"] },

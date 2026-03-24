@@ -63,8 +63,30 @@ model Employee {
   leaveRequests  LeaveRequest[]
   payrollEntries PayrollEntry[]
   salaryAdvances SalaryAdvance[]
+  wallet         Wallet?
+  paymentMethods PaymentMethod[]
 
   @@map("employees")
+}
+
+model PaymentMethod {
+  id           String     @id @default(cuid())
+  employeeId   String
+  type         PaymentType
+  bankCode     String?
+  accountNumber String?
+  accountName  String?
+  mpesaNumber  String?
+  swiftCode    String?
+  iban         String?
+  primary      Boolean    @default(false)
+  verified     Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  employee     Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, primary], name: "one_primary_per_employee")
+  @@map("payment_methods")
 }
 
 model PayrollRun {
@@ -319,6 +341,59 @@ model Integration {
   updatedAt    DateTime @updatedAt
 
   @@map("integrations")
+}
+
+model Wallet {
+  id              String              @id @default(cuid())
+  employeeId      String              @unique
+  balance         Float               @default(0)
+  currency        String              @default("KES")
+  lastTopupAt     DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  employee        Employee            @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  transactions    WalletTransaction[]
+
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id                String              @id @default(cuid())
+  walletId          String
+  type              WalletTransactionType
+  amount            Float
+  balanceBefore     Float
+  balanceAfter      Float
+  status            TransactionStatus   @default(PENDING)
+  paymentReference  String?
+  pesapalReference  String?
+  description       String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  wallet            Wallet              @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@map("wallet_transactions")
+}
+
+enum PaymentType {
+  BANK
+  MPESA
+  INTERNATIONAL
+}
+
+enum WalletTransactionType {
+  TOPUP
+  WITHDRAWAL
+  DISBURSEMENT
+  REFUND
+  ADJUSTMENT
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
 }
 
 enum Role {

@@ -1,102 +1,374 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { Bell, CheckCircle, AlertTriangle, Info, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
-import { Badge } from "@/app/components/ui/badge";
-import { Button } from "@/app/components/ui/button";
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Bell,
+  Trash2,
+  CheckCircle,
+  AlertCircle,
+  FileText,
+  DollarSign,
+  Clock,
+  Loader2,
+  Filter,
+} from "lucide-react";
 
 interface Notification {
   id: string;
-  title: string;
-  message: string;
   type: string;
+  subject: string;
+  message: string;
   read: boolean;
   createdAt: string;
+  readAt?: string;
+  data?: Record<string, any>;
 }
 
-const ICONS: Record<string, React.ReactNode> = {
-  WARNING: <AlertTriangle className="w-5 h-5 text-amber-500" />,
-  SUCCESS: <CheckCircle className="w-5 h-5 text-green-500" />,
-  INFO: <Info className="w-5 h-5 text-blue-500" />,
-  ERROR: <AlertTriangle className="w-5 h-5 text-red-500" />,
-};
+type NotificationFilter = "all" | "unread" | "read";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<NotificationFilter>("all");
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  const fetchNotifications = useCallback(async () => {
-    const res = await fetch("/api/notifications?limit=50");
-    const json = await res.json();
-    if (json.success) {
-      setNotifications(json.data.notifications);
-      setUnreadCount(json.data.unreadCount);
-    }
-    setLoading(false);
+  useEffect(() => {
+    fetchNotifications();
+    // Poll for new notifications every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/notifications/list?limit=50");
 
-  async function markAllRead() {
-    await fetch("/api/notifications", {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ markAllRead: true }),
-    });
-    fetchNotifications();
-  }
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unread || 0);
+      }
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  async function markRead(id: string) {
-    await fetch("/api/notifications", {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
+  const handleMarkAsRead = async (notificationId: string) => {
+    try {
+      const res = await fetch("/api/notifications/mark-read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationId }),
+      });
+
+      if (res.ok) {
+        fetchNotifications();
+      }
+    } catch (error) {
+      console.error("Failed to mark as read:", error);
+    }
+  };
+
+  const handleDelete = async (notificationId: string) => {
+    try {
+      const res = await fetch("/api/notifications/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationId }),
+      });
+
+      if (res.ok) {
+        fetchNotifications();
+      }
+    } catch (error) {
+      console.error("Failed to delete notification:", error);
+    }
+  };
+
+  const getNotificationIcon = (type: string) => {
+    const icons: Record<string, JSX.Element> = {
+      LEAVE_APPROVED: <CheckCircle className="w-5 h-5 text-green-600" />,
+      LEAVE_REJECTED: <AlertCircle className="w-5 h-5 text-red-600" />,
+      PAYSLIP_AVAILABLE: <DollarSign className="w-5 h-5 text-green-600" />,
+      COMPLIANCE_DUE: <AlertCircle className="w-5 h-5 text-orange-600" />,
+      ATTENDANCE_ALERT: <Clock className="w-5 h-5 text-orange-600" />,
+      DOCUMENT_RECEIVED: <FileText className="w-5 h-5 text-blue-600" />,
+      SALARY_PAID: <DollarSign className="w-5 h-5 text-green-600" />,
+    };
+    return icons[type] || <Bell className="w-5 h-5 text-gray-600" />;
+  };
+
+  const getNotificationColor = (type: string): string => {
+    const colors: Record<string, string> = {
+      LEAVE_APPROVED: "bg-green-50 border-green-200",
+      LEAVE_REJECTED: "bg-red-50 border-red-200",
+      PAYSLIP_AVAILABLE: "bg-green-50 border-green-200",
+      COMPLIANCE_DUE: "bg-orange-50 border-orange-200",
+      ATTENDANCE_ALERT: "bg-orange-50 border-orange-200",
+      DOCUMENT_RECEIVED: "bg-blue-50 border-blue-200",
+      SALARY_PAID: "bg-green-50 border-green-200",
+    };
+    return colors[type] || "bg-gray-50 border-gray-200";
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+
+    return date.toLocaleDateString("en-KE", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    setUnreadCount(c => Math.max(0, c - 1));
-  }
+  };
+
+  const filteredNotifications =
+    filter === "all"
+      ? notifications
+      : filter === "unread"
+        ? notifications.filter((n) => !n.read)
+        : notifications.filter((n) => n.read);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Notifications</h1>
-          <p className="text-slate-500 text-sm mt-0.5">System alerts and updates</p>
+          <h1 className="text-3xl font-bold">Notifications</h1>
+          <p className="text-gray-600">Stay updated with important alerts</p>
         </div>
-        {unreadCount > 0 && (
-          <Button variant="outline" size="sm" onClick={markAllRead}>Mark all as read</Button>
-        )}
+        <Bell className="w-8 h-8 text-primary" />
       </div>
 
+      {/* Unread Count */}
+      {unreadCount > 0 && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">You have</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {unreadCount} unread notification{unreadCount !== 1 ? "s" : ""}
+                </p>
+              </div>
+              <Button onClick={() => setFilter("unread")}>View Unread</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Filter Buttons */}
+      <div className="flex gap-2">
+        <Button
+          variant={filter === "all" ? "default" : "outline"}
+          onClick={() => setFilter("all")}
+          className="gap-2"
+        >
+          <Filter className="w-4 h-4" />
+          All
+        </Button>
+        <Button
+          variant={filter === "unread" ? "default" : "outline"}
+          onClick={() => setFilter("unread")}
+        >
+          Unread ({unreadCount})
+        </Button>
+        <Button
+          variant={filter === "read" ? "default" : "outline"}
+          onClick={() => setFilter("read")}
+        >
+          Read
+        </Button>
+      </div>
+
+      {/* Notifications List */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Bell className="w-4 h-4 text-slate-500" />
-              All Notifications
-            </CardTitle>
-            {unreadCount > 0 && <Badge variant="danger">{unreadCount} unread</Badge>}
-          </div>
+          <CardTitle>
+            {filter === "all" && "All Notifications"}
+            {filter === "unread" && "Unread Notifications"}
+            {filter === "read" && "Read Notifications"}
+          </CardTitle>
+          <CardDescription>
+            {filteredNotifications.length} notification{
+              filteredNotifications.length !== 1 ? "s" : ""
+            }
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2 p-3">
+        <CardContent>
           {loading ? (
-            <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
-          ) : notifications.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 text-sm">No notifications</div>
-          ) : notifications.map(notif => (
-            <div key={notif.id} onClick={() => !notif.read && markRead(notif.id)}
-              className={`flex items-start gap-4 p-4 rounded-xl transition-colors cursor-pointer ${notif.read ? "bg-slate-50 hover:bg-slate-100" : "bg-blue-50 border border-blue-100 hover:bg-blue-100"}`}>
-              <div className="shrink-0 mt-0.5">{ICONS[notif.type] ?? ICONS.INFO}</div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className={`text-sm font-semibold ${notif.read ? "text-slate-700" : "text-slate-900"}`}>{notif.title}</p>
-                  {!notif.read && <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />}
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin" />
+            </div>
+          ) : filteredNotifications.length === 0 ? (
+            <div className="text-center py-12 text-gray-600">
+              <Bell className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p>No notifications</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-screen overflow-y-auto">
+              {filteredNotifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`p-4 border rounded-lg transition-all ${
+                    !notification.read
+                      ? getNotificationColor(notification.type)
+                      : "bg-gray-50 border-gray-200"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Icon */}
+                    <div className="flex-shrink-0 mt-1">
+                      {getNotificationIcon(notification.type)}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3
+                            className={`font-semibold ${
+                              !notification.read
+                                ? "text-gray-900"
+                                : "text-gray-700"
+                            }`}
+                          >
+                            {notification.subject}
+                          </h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {notification.message}
+                          </p>
+
+                          {/* Data Display */}
+                          {notification.data && (
+                            <div className="mt-3 space-y-1 text-sm">
+                              {Object.entries(notification.data).map(
+                                ([key, value]) => (
+                                  <p key={key} className="text-gray-600">
+                                    <span className="font-medium">{key}:</span>{" "}
+                                    {String(value)}
+                                  </p>
+                                )
+                              )}
+                            </div>
+                          )}
+
+                          <p className="text-xs text-gray-500 mt-2">
+                            {formatDate(notification.createdAt)}
+                          </p>
+                        </div>
+
+                        {/* Badge */}
+                        <Badge
+                          variant={notification.read ? "secondary" : "default"}
+                          className="ml-2"
+                        >
+                          {notification.read ? "Read" : "New"}
+                        </Badge>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2 mt-3">
+                        {!notification.read && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              handleMarkAsRead(notification.id)
+                            }
+                          >
+                            Mark as Read
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600"
+                          onClick={() => handleDelete(notification.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-sm text-slate-500 mt-0.5">{notif.message}</p>
-                <p className="text-xs text-slate-400 mt-1">{new Date(notif.createdAt).toLocaleString()}</p>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Notification Types Reference */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Notification Types</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="flex gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Leave Approved</p>
+                <p className="text-gray-600">Your leave request approved</p>
               </div>
             </div>
-          ))}
+            <div className="flex gap-2">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Leave Rejected</p>
+                <p className="text-gray-600">Your leave request rejected</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <DollarSign className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Salary Paid</p>
+                <p className="text-gray-600">Your salary has been processed</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Compliance Due</p>
+                <p className="text-gray-600">Compliance deadline approaching</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <FileText className="w-5 h-5 text-blue-600 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Document Received</p>
+                <p className="text-gray-600">New document uploaded</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Clock className="w-5 h-5 text-orange-600 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Attendance Alert</p>
+                <p className="text-gray-600">Attendance issue detected</p>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
