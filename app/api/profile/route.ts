@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentDbUser } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 
 export async function GET() {
   try {
@@ -7,6 +8,11 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const employee = await prisma.employee.findFirst({
+      where: { email: user.email },
+      include: { department: true },
+    });
 
     return NextResponse.json({
       success: true,
@@ -16,6 +22,14 @@ export async function GET() {
         name: user.name,
         email: user.email,
         role: user.role,
+        employeeId: employee?.employeeId ?? null,
+        jobTitle: employee?.jobTitle ?? null,
+        department: employee?.department?.name ?? null,
+        phone: employee?.phone ?? null,
+        hireDate: employee?.hireDate ?? null,
+        employmentType: employee?.employmentType ?? null,
+        nationalId: employee?.nationalId ?? null,
+        kraPin: employee?.kraPin ?? null,
       },
     });
   } catch (error) {

@@ -22,20 +22,18 @@ export async function getUserRole(userId: string): Promise<RoleContext | null> {
       where: { clerkId: userId },
     });
     if (!user) return null;
-    const employee = await prisma.employee.findUnique({
-      where: { id: user.employeeId }, // assuming user has employeeId
+
+    const employee = await prisma.employee.findFirst({
+      where: { email: user.email },
       include: { department: true },
     });
-    if (!employee) return null;
-
-    if (!employee) return null;
 
     return {
       userId,
-      email: employee.email,
-      role: employee.role as UserRole,
-      employeeId: employee.id,
-      departmentId: employee.departmentId,
+      email: user.email,
+      role: user.role as UserRole,
+      employeeId: employee?.id,
+      departmentId: employee?.departmentId,
     };
   } catch (error) {
     console.error("Error fetching user role:", error);

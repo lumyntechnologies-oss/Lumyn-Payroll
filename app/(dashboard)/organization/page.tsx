@@ -1,91 +1,60 @@
 "use client";
 
-import { Users, ChevronDown, ChevronRight } from "lucide-react";
+import { Users, ChevronDown, ChevronRight, Loader2, Building2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-interface OrgNode {
-  name: string;
-  title: string;
-  dept?: string;
-  reports?: OrgNode[];
+interface Employee {
+  id: string;
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  jobTitle: string;
+  employmentType: string;
 }
 
-const orgData: OrgNode = {
-  name: "Michael Omondi",
-  title: "CEO",
-  reports: [
-    {
-      name: "Esther Mutua",
-      title: "Finance Director",
-      dept: "Finance",
-      reports: [
-        { name: "James Otieno", title: "Senior Accountant", dept: "Finance" },
-        { name: "Faith Waweru", title: "Finance Analyst", dept: "Finance" },
-      ],
-    },
-    {
-      name: "Sarah Wanjiku",
-      title: "HR Director",
-      dept: "HR",
-      reports: [
-        { name: "Alice Nyambura", title: "HR Officer", dept: "HR" },
-        { name: "Tom Gitau", title: "Recruiter", dept: "HR" },
-      ],
-    },
-    {
-      name: "Peter Kamau",
-      title: "CTO",
-      dept: "Engineering",
-      reports: [
-        { name: "David Mwangi", title: "Tech Lead", dept: "Engineering" },
-        { name: "Brian Ochieng", title: "Frontend Dev", dept: "Engineering" },
-        { name: "Linda Atieno", title: "Backend Dev", dept: "Engineering" },
-      ],
-    },
-    {
-      name: "John Njoroge",
-      title: "Sales Director",
-      dept: "Sales",
-      reports: [
-        { name: "Grace Achieng", title: "Sales Executive", dept: "Sales" },
-        { name: "Kevin Maina", title: "Sales Executive", dept: "Sales" },
-      ],
-    },
-  ],
-};
+interface Department {
+  id: string;
+  name: string;
+  description?: string;
+  employees: Employee[];
+}
 
-function OrgCard({ node, level = 0 }: { node: OrgNode; level?: number }) {
+function DepartmentCard({ dept }: { dept: Department }) {
   const [expanded, setExpanded] = useState(true);
-  const hasReports = node.reports && node.reports.length > 0;
 
   return (
-    <div className={`flex flex-col items-center ${level > 0 ? "mt-4" : ""}`}>
+    <div className="flex flex-col items-center">
       <div
-        className={`relative flex flex-col items-center bg-white border-2 rounded-xl px-5 py-3 shadow-sm min-w-40 text-center cursor-pointer hover:border-blue-300 transition-colors ${level === 0 ? "border-blue-500" : "border-slate-200"}`}
-        onClick={() => hasReports && setExpanded(!expanded)}
+        className="flex flex-col items-center bg-white border-2 border-blue-400 rounded-xl px-5 py-3 shadow-sm min-w-44 text-center cursor-pointer hover:border-blue-500 transition-colors"
+        onClick={() => setExpanded(!expanded)}
       >
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${level === 0 ? "bg-blue-500" : "bg-slate-100"}`}>
-          {level === 0 ? (
-            <span className="text-white font-bold text-sm">{node.name.split(" ").map(n => n[0]).join("")}</span>
-          ) : (
-            <Users className="w-4 h-4 text-slate-500" />
-          )}
+        <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center mb-2">
+          <Building2 className="w-5 h-5 text-white" />
         </div>
-        <p className="font-semibold text-sm text-slate-900 whitespace-nowrap">{node.name}</p>
-        <p className="text-xs text-slate-500 mt-0.5">{node.title}</p>
-        {node.dept && <p className="text-xs text-blue-600 mt-0.5">{node.dept}</p>}
-        {hasReports && (
-          <div className="mt-2 text-slate-400">
-            {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-          </div>
-        )}
+        <p className="font-semibold text-sm text-slate-900 whitespace-nowrap">{dept.name}</p>
+        <p className="text-xs text-slate-500 mt-0.5">{dept.employees.length} employee{dept.employees.length !== 1 ? "s" : ""}</p>
+        <div className="mt-1 text-slate-400">
+          {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+        </div>
       </div>
 
-      {hasReports && expanded && (
-        <div className="flex flex-wrap gap-6 mt-4 pt-4 border-t-2 border-slate-200 relative">
-          {node.reports!.map((child, i) => (
-            <OrgCard key={i} node={child} level={level + 1} />
+      {expanded && dept.employees.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-4 mt-4 pt-4 border-t-2 border-slate-200">
+          {dept.employees.map((emp) => (
+            <div
+              key={emp.id}
+              className="flex flex-col items-center bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm min-w-36 text-center"
+            >
+              <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center mb-2">
+                <Users className="w-4 h-4 text-slate-500" />
+              </div>
+              <p className="font-medium text-sm text-slate-900 whitespace-nowrap">
+                {emp.firstName} {emp.lastName}
+              </p>
+              <p className="text-xs text-slate-500 mt-0.5">{emp.jobTitle}</p>
+              <p className="text-xs text-blue-600 mt-0.5 font-mono">{emp.employeeId}</p>
+            </div>
           ))}
         </div>
       )}
@@ -94,25 +63,85 @@ function OrgCard({ node, level = 0 }: { node: OrgNode; level?: number }) {
 }
 
 export default function OrganizationPage() {
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/organization")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setDepartments(d.data);
+        else setError(d.error || "Failed to load organization data");
+      })
+      .catch(() => setError("Network error loading organization"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const totalEmployees = departments.reduce((sum, d) => sum + d.employees.length, 0);
+
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Organization Structure</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Company hierarchy and reporting structure</p>
+        <p className="text-slate-500 text-sm mt-0.5">Company departments and team members</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Reporting Hierarchy</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <div className="flex justify-center p-4 min-w-max">
-              <OrgCard node={orgData} />
-            </div>
+      {loading && (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-blue-600">{departments.length}</p>
+                <p className="text-xs text-slate-500 mt-1">Departments</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-green-600">{totalEmployees}</p>
+                <p className="text-xs text-slate-500 mt-1">Active Employees</p>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+
+          {departments.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center text-slate-500">
+                <Building2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="font-medium">No departments found</p>
+                <p className="text-sm mt-1">Add departments and employees to see the org chart</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Department Structure</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <div className="flex flex-wrap gap-8 p-4 min-w-max justify-center">
+                    {departments.map((dept) => (
+                      <DepartmentCard key={dept.id} dept={dept} />
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
     </div>
   );
 }

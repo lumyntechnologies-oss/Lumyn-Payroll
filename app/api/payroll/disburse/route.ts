@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Only FINANCE_LEAD, CFO, SUPER_ADMIN can disburse
-  const roleCheck = await checkRoleMiddleware(req, ["FINANCE_LEAD", "CFO", "SUPER_ADMIN"]);
+  const roleCheck = await checkRoleMiddleware(req, ["FINANCE", "SUPER_ADMIN"]);
   if (!roleCheck.valid) return roleCheck.response!;
 
   const body = await req.json();
@@ -49,19 +49,25 @@ export async function POST(req: NextRequest) {
     // Initialize payment service
     const paymentService = new PaymentService();
 
-    // Prepare disbursements from payroll entries
-    const disbursements = payrollRun.entries.map((entry) => ({
-      employeeId: entry.employeeId,
-      employeeName: `${entry.employee.firstName} ${entry.employee.lastName}`,
-      amount: Number(entry.netSalary),
-      paymentMethod: {
-        type: (Math.random() > 0.5 ? "BANK" : "MPESA") as "BANK" | "MPESA",
-        accountNumber: entry.employee.bankAccount || `254${Math.floor(Math.random() * 900000000) + 100000000}`,
-        accountName: `${entry.employee.firstName} ${entry.employee.lastName}`,
-        bankCode: entry.employee.bankName || "001",
-        mpesaPhone: entry.employee.mpesaNumber || `254${Math.floor(Math.random() * 900000000) + 700000000}`,
-      },
-    }));
+    // Prepare disbursements from payroll entries using real employee payment info
+    const disbursements = payrollRun.entries.map((entry) => {
+      const hasBankAccount = !!(entry.employee.bankAccount && entry.employee.bankName);
+      const hasMpesa = !!entry.employee.mpesaNumber;
+      const type: "BANK" | "MPESA" = hasBankAccount ? "BANK" : hasMpesa ? "MPESA" : "BANK";
+
+      return {
+        employeeId: entry.employeeId,
+        employeeName: `${entry.employee.firstName} ${entry.employee.lastName}`,
+        amount: Number(entry.netSalary),
+        paymentMethod: {
+          type,
+          accountNumber: entry.employee.bankAccount || entry.employee.mpesaNumber || "",
+          accountName: `${entry.employee.firstName} ${entry.employee.lastName}`,
+          bankCode: entry.employee.bankName || "",
+          mpesaPhone: entry.employee.mpesaNumber || "",
+        },
+      };
+    });
 
     // Process disbursements through payment service
     const result = await paymentService.disburseSalaries(disbursements);
@@ -132,7 +138,7 @@ export async function GET(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const roleCheck = await checkRoleMiddleware(req, ["HR_ADMIN", "FINANCE_LEAD", "CFO", "SUPER_ADMIN"]);
+  const roleCheck = await checkRoleMiddleware(req, ["HR_ADMIN", "FINANCE", "SUPER_ADMIN"]);
   if (!roleCheck.valid) return roleCheck.response!;
 
   try {

@@ -57,12 +57,14 @@ proxy.ts                  Clerk auth middleware (Next.js 16 convention)
 
 ## Roles & Permissions
 
-Defined in `lib/rbac.ts`:
+Defined in Prisma schema and `lib/rbac.ts`. Valid DB roles are:
 - `SUPER_ADMIN` — Full access + admin panel
 - `HR_ADMIN` — Employee management, leave, onboarding
-- `FINANCE` / `FINANCE_LEAD` / `CFO` — Payroll, disbursements, wallet
+- `FINANCE` — Payroll, disbursements, wallet (replaces `FINANCE_LEAD`/`CFO` which only exist in rbac.ts labels, not DB)
 - `MANAGER` — Department-level view + leave approvals
 - `EMPLOYEE` — Own profile, payslips, leave requests
+
+Note: `FINANCE_LEAD` and `CFO` appear in `lib/rbac.ts` as display labels only — the DB Role enum uses `FINANCE` for the finance role. All API `checkRoleMiddleware` calls use valid DB roles only.
 
 ## Running Workflows
 
@@ -76,3 +78,7 @@ Defined in `lib/rbac.ts`:
 - The DB adapter is `@prisma/adapter-pg` (PrismaPg) — the DATABASE_URL is passed to it directly
 - To set a super admin: update `SUPER_ADMIN_CLERK_ID` env var with the user's Clerk ID
 - Payroll calculations are done in `app/api/payroll/runs/route.ts` (PAYE, NSSF, SHIF, Housing Levy)
+- `lib/middleware/role-check.ts` `getUserRole()` fetches role from `User` table; employee record is looked up by email (User has no `employeeId` field)
+- `/api/payroll/runs` returns `{ data: { runs, pagination } }` — always access `.data.runs` not `.data` directly
+- `/api/organization` serves real department+employee data for the org chart page
+- `/api/payments/batches` returns disbursed payroll runs formatted as batch history

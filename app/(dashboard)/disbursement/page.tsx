@@ -58,7 +58,7 @@ export default function DisbursementPage() {
       const data = await response.json();
       if (data.success) {
         // Filter only approved runs
-        const approved = data.data.filter((r: PayrollRun) => r.status === "APPROVED");
+        const approved = (data.data.runs || []).filter((r: PayrollRun) => r.status === "APPROVED");
         setPayrollRuns(approved);
       }
     } catch (err) {

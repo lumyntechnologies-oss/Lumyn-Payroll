@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const roleCheck = await checkRoleMiddleware(req, ["EMPLOYEE", "MANAGER", "HR_ADMIN", "FINANCE_LEAD", "CFO", "SUPER_ADMIN"]);
+  const roleCheck = await checkRoleMiddleware(req, ["EMPLOYEE", "MANAGER", "HR_ADMIN", "FINANCE", "SUPER_ADMIN"]);
   if (!roleCheck.valid) return roleCheck.response!;
 
   const context = roleCheck.context!;
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const roleCheck = await checkRoleMiddleware(req, ["EMPLOYEE", "MANAGER", "HR_ADMIN", "FINANCE_LEAD", "CFO", "SUPER_ADMIN"]);
+  const roleCheck = await checkRoleMiddleware(req, ["EMPLOYEE", "MANAGER", "HR_ADMIN", "FINANCE", "SUPER_ADMIN"]);
   if (!roleCheck.valid) return roleCheck.response!;
 
   const context = roleCheck.context!;

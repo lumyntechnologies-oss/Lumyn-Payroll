@@ -110,7 +110,7 @@ export default function LeaveManagementPage() {
 
       if (typesRes.ok) {
         const data = await typesRes.json();
-        setLeaveTypes(data.data?.leaveTypes || []);
+        setLeaveTypes(data.data || []);
       }
     } catch (error) {
       console.error("Failed to fetch leave data:", error);
