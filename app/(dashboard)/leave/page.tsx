@@ -78,9 +78,13 @@ export default function LeavePage() {
         const d = await profileRes.json();
         if (d.success) setUserProfile({ role: d.data.role });
       }
-      if (reqRes.ok) {
+if (reqRes.ok) {
         const d = await reqRes.json();
-        setRequests(Array.isArray(d) ? d : d.requests ?? d.data ?? []);
+        if (d.success) {
+          setRequests(Array.isArray(d.data) ? d.data : d.requests ?? []);
+        } else {
+          setRequests(Array.isArray(d) ? d : d.requests ?? d.data ?? []);
+        }
       }
       if (balRes.ok) {
         const d = await balRes.json();
@@ -130,7 +134,7 @@ export default function LeavePage() {
     setSaving(false);
   }
 
-  const pending = requests.filter((r) => r.status === "PENDING").length;
+const pending = (requests ?? []).filter((r) => r.status === "PENDING").length;
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: "requests", label: "Requests", count: pending },
