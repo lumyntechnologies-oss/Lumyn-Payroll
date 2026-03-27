@@ -32,8 +32,8 @@ export default function DepartmentsPage() {
     try {
       setLoading(true);
       const res = await fetch("/api/departments");
-      const data = await res.json();
-      setDepartments(data);
+const data = await res.json();
+      setDepartments(Array.isArray(data) ? data : data.departments ?? data.data ?? []);
     } catch (error) {
       console.error("Failed to fetch departments:", error);
     } finally {
