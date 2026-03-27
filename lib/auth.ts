@@ -1,7 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
-
-import { Role } from "@/lib/rbac";
+import { Role } from "@/lib/generated/prisma";
 
 export async function getCurrentDbUser() {
   const { userId } = await auth();
@@ -10,27 +9,30 @@ export async function getCurrentDbUser() {
   let user = await prisma.user.findUnique({ where: { clerkId: userId } });
 
   if (!user) {
-    const clerkUser = await currentUser();
-    if (!clerkUser) return null;
-
     const superAdminId = process.env.SUPER_ADMIN_CLERK_ID;
-    const role: Role = superAdminId && userId === superAdminId ? "SUPER_ADMIN" : "EMPLOYEE";
-
-    user = await prisma.user.create({
-      data: {
-        clerkId: userId,
-        email: clerkUser.emailAddresses[0]?.emailAddress ?? "",
-        name: `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim(),
-        role,
-      },
-    });
+    if (superAdminId && userId === superAdminId) {
+      const clerkUser = await currentUser();
+      if (!clerkUser) return null;
+      user = await prisma.user.create({
+        data: {
+          clerkId: userId,
+          email: clerkUser.emailAddresses[0]?.emailAddress ?? "",
+          name:
+            `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() ||
+            "Super Admin",
+          role: Role.SUPER_ADMIN,
+        },
+      });
+    } else {
+      return null;
+    }
   }
 
   const superAdminId = process.env.SUPER_ADMIN_CLERK_ID;
-  if (superAdminId && userId === superAdminId && user.role !== "SUPER_ADMIN") {
+  if (superAdminId && userId === superAdminId && user.role !== Role.SUPER_ADMIN) {
     user = await prisma.user.update({
       where: { clerkId: userId },
-      data: { role: "SUPER_ADMIN" },
+      data: { role: Role.SUPER_ADMIN },
     });
   }
 

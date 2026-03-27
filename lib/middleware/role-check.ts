@@ -96,21 +96,7 @@ export const ROLE_PERMISSIONS = {
     canViewAuditLog: true,
     canManagePaymentRules: false,
   },
-  FINANCE_LEAD: {
-    canViewOwnPayslips: true,
-    canViewOwnPaymentMethods: true,
-    canAddPaymentMethod: true,
-    canViewOwnTransactionHistory: true,
-    canViewOwnProfile: true,
-    canViewPayroll: true,
-    canViewAllPayments: true,
-    canApproveDisbursement: true,
-    canReconcile: true,
-    canManageProviders: false,
-    canViewAuditLog: true,
-    canManagePaymentRules: false,
-  },
-  CFO: {
+  FINANCE: {
     canViewOwnPayslips: true,
     canViewOwnPaymentMethods: true,
     canAddPaymentMethod: true,
@@ -192,7 +178,7 @@ export async function checkRoleMiddleware(
  * Filter data based on user role
  */
 export function filterDataByRole(data: any[], userRole: UserRole, userId: string): any[] {
-  if (userRole === "SUPER_ADMIN" || userRole === "CFO") {
+  if (userRole === "SUPER_ADMIN" || userRole === "FINANCE") {
     return data; // Full access
   }
 

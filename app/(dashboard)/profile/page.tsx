@@ -1,215 +1,178 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { User, Mail, Phone, Banknote, CreditCard, Save, CheckCircle, DollarSign } from "lucide-react";
-// import { PaymentType } from "@prisma/client/runtime/library";
+import { User, Mail, Phone, Building2, Calendar, Loader2, CreditCard, DollarSign, Shield } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { Badge } from "@/app/components/ui/badge";
 
-interface Profile {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  jobTitle: string;
-  basicSalary: number;
-  department: string;
-  hireDate: string;
-}
-
-interface PaymentMethod {
+interface ProfileData {
   id: string;
-  type: string;
-  accountNumber: string;
-  primary: boolean;
+  name: string;
+  email: string;
+  role: string;
+  employeeId: string | null;
+  jobTitle: string | null;
+  department: string | null;
+  phone: string | null;
+  hireDate: string | null;
+  employmentType: string | null;
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  SUPER_ADMIN: "Super Admin",
+  HR_ADMIN: "HR Administrator",
+  FINANCE: "Finance",
+  MANAGER: "Manager",
+  EMPLOYEE: "Employee",
+};
+
+const ROLE_COLORS: Record<string, "default" | "success" | "warning" | "danger" | "secondary"> = {
+  SUPER_ADMIN: "danger",
+  HR_ADMIN: "default",
+  FINANCE: "success",
+  MANAGER: "warning",
+  EMPLOYEE: "secondary",
+};
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
-const [formData, setFormData] = useState<Profile>({ firstName: '', lastName: '', email: '', phone: '', jobTitle: '', basicSalary: 0, department: '', hireDate: '' });
 
   useEffect(() => {
-    fetchProfile();
+    fetch("/api/profile")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) setProfile(json.data);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      const [profileRes, paymentsRes] = await Promise.all([
-        fetch("/api/profile"),
-        fetch("/api/payments/methods"),
-      ]);
-      if (profileRes.ok) {
-        const data = await profileRes.json();
-        setProfile(data);
-        setFormData(data);
-      }
-      if (paymentsRes.ok) {
-        const data = await paymentsRes.json();
-        setPaymentMethods(Array.isArray(data) ? data : data.paymentMethods || []);
-      }
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-7 h-7 animate-spin text-blue-500" />
+      </div>
+    );
+  }
 
-    } catch (error) {
-      console.error("Failed to fetch profile:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (!profile) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3 text-slate-400">
+        <User className="w-10 h-10" />
+        <p className="text-sm">Could not load profile. Please refresh.</p>
+      </div>
+    );
+  }
 
-  const saveProfile = async () => {
-    try {
-      const res = await fetch("/api/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      if (res.ok) {
-        setEditing(false);
-        fetchProfile();
-      }
-    } catch (error) {
-      console.error("Failed to save profile:", error);
-    }
-  };
-
-  if (loading) return <div>Loading profile...</div>;
+  const initials = profile.name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-          <User className="w-10 h-10 text-white" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold">{profile?.firstName} {profile?.lastName}</h1>
-          <p className="text-muted-foreground">{profile?.jobTitle} • {profile?.department}</p>
-        </div>
-      </div>
+      <h1 className="text-2xl font-bold text-slate-900">My Profile</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Profile Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile Information</CardTitle>
-            <Button variant="ghost" onClick={() => setEditing(!editing)}>
-              {editing ? 'Cancel' : 'Edit Profile'}
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>First Name</Label>
-                <Input value={formData.firstName || ''} onChange={(e) => setFormData({...formData, firstName: e.target.value})} disabled={!editing} />
-              </div>
-              <div className="space-y-2">
-                <Label>Last Name</Label>
-                <Input value={formData.lastName || ''} onChange={(e) => setFormData({...formData, lastName: e.target.value})} disabled={!editing} />
-              </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <Card className="lg:col-span-1">
+          <CardContent className="p-6 flex flex-col items-center text-center">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold mb-4">
+              {initials}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input value={formData.email || ''} disabled />
-              </div>
-              <div className="space-y-2">
-                <Label>Phone</Label>
-                <Input value={formData.phone || ''} onChange={(e) => setFormData({...formData, phone: e.target.value})} disabled={!editing} />
-              </div>
+            <h2 className="text-lg font-bold text-slate-900">{profile.name}</h2>
+            {profile.jobTitle && (
+              <p className="text-sm text-slate-500 mt-0.5">{profile.jobTitle}</p>
+            )}
+            <div className="mt-3">
+              <Badge variant={ROLE_COLORS[profile.role] ?? "secondary"}>
+                {ROLE_LABELS[profile.role] ?? profile.role}
+              </Badge>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Department</Label>
-                <Input value={profile?.department} disabled />
+            {profile.department && (
+              <div className="flex items-center gap-1.5 mt-3 text-sm text-slate-500">
+                <Building2 className="w-3.5 h-3.5" />
+                {profile.department}
               </div>
-              <div className="space-y-2">
-                <Label>Hire Date</Label>
-                <Input value={profile?.hireDate} disabled />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Basic Salary</Label>
-              <div className="flex items-center gap-2">
-                <Banknote className="w-5 h-5" />
-                <Input type="number" value={formData.basicSalary || ''} onChange={(e) => setFormData({...formData, basicSalary: parseFloat(e.target.value)})} disabled={!editing} className="flex-1" />
-              </div>
-            </div>
-            {editing && (
-              <Button className="w-full" onClick={saveProfile}>
-                <Save className="w-4 h-4 mr-2" />
-                Save Changes
-              </Button>
             )}
           </CardContent>
         </Card>
 
-        {/* Payment Methods */}
-        <Card>
+        <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Payment Methods</CardTitle>
+            <CardTitle className="text-sm">Account Details</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {paymentMethods.map((method) => (
-                <div key={method.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <CreditCard className="w-5 h-5" />
-                    <div>
-                      <p className="font-medium">{method.type}</p>
-                      <p className="text-sm text-muted-foreground">**** {method.accountNumber.slice(-4)}</p>
-                    </div>
-                  </div>
-                  <Badge variant={method.primary ? "default" : "secondary"}>{method.primary ? "Primary" : "Secondary"}</Badge>
-                </div>
-              ))}
-              {paymentMethods.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  No payment methods added
-                </div>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <InfoRow icon={Mail} label="Email" value={profile.email} />
+              <InfoRow icon={Phone} label="Phone" value={profile.phone ?? "Not set"} />
+              <InfoRow icon={Shield} label="System Role" value={ROLE_LABELS[profile.role] ?? profile.role} />
+              {profile.employeeId && (
+                <InfoRow icon={User} label="Employee ID" value={profile.employeeId} mono />
+              )}
+              {profile.hireDate && (
+                <InfoRow
+                  icon={Calendar}
+                  label="Hire Date"
+                  value={new Date(profile.hireDate).toLocaleDateString("en-KE", { dateStyle: "long" })}
+                />
+              )}
+              {profile.employmentType && (
+                <InfoRow icon={Building2} label="Employment Type" value={profile.employmentType.replace("_", " ")} />
               )}
             </div>
-            <Button className="mt-6 w-full" variant="outline">
-              + Add Payment Method
-            </Button>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Status</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-green-600" />
-            </div>
-            <h3 className="font-medium">Profile Verified</h3>
-            <p className="text-sm text-muted-foreground mt-1">All information verified</p>
-          </div>
-          <div className="text-center">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <DollarSign className="w-8 h-8 text-blue-600" />
-            </div>
-            <h3 className="font-medium">Salary Setup</h3>
-            <p className="text-sm text-muted-foreground mt-1">Payment method configured</p>
-          </div>
-          <div className="text-center">
-            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Mail className="w-8 h-8 text-yellow-600" />
-            </div>
-            <h3 className="font-medium">Notifications</h3>
-            <p className="text-sm text-muted-foreground mt-1">Email & SMS enabled</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          { icon: User, label: "Profile", desc: "Account verified", color: "bg-blue-100 text-blue-600" },
+          { icon: DollarSign, label: "Payroll", desc: profile.employeeId ? "Enrolled in payroll" : "Not yet added to payroll", color: "bg-green-100 text-green-600" },
+          { icon: CreditCard, label: "Payments", desc: "Manage in Payment Methods", color: "bg-purple-100 text-purple-600" },
+        ].map((item) => {
+          const Icon = item.icon;
+          return (
+            <Card key={item.label}>
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className={`w-10 h-10 rounded-lg ${item.color} flex items-center justify-center shrink-0`}>
+                  <Icon className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm text-slate-900">{item.label}</p>
+                  <p className="text-xs text-slate-500">{item.desc}</p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({
+  icon: Icon,
+  label,
+  value,
+  mono = false,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50">
+      <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0">
+        <Icon className="w-4 h-4 text-slate-500" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs text-slate-400 font-medium">{label}</p>
+        <p className={`text-sm text-slate-800 font-medium truncate ${mono ? "font-mono" : ""}`}>{value}</p>
+      </div>
     </div>
   );
 }

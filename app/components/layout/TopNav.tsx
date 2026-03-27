@@ -96,7 +96,7 @@ export function TopNav() {
               {role && <p className="text-xs text-slate-500 mt-0.5">{formatRole(role)}</p>}
             </div>
           )}
-          <UserButton afterSignOutUrl="/sign-in" />
+          <UserButton />
         </div>
       </div>
     </header>

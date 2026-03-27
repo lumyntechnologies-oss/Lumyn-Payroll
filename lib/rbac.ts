@@ -1,13 +1,9 @@
-// Permission matrix: Role -> Feature -> Allowed Actions
-
 export const Roles = {
   SUPER_ADMIN: "SUPER_ADMIN",
   HR_ADMIN: "HR_ADMIN",
   FINANCE: "FINANCE",
-  FINANCE_LEAD: "FINANCE_LEAD",
-  CFO: "CFO",
   MANAGER: "MANAGER",
-  EMPLOYEE: "EMPLOYEE"
+  EMPLOYEE: "EMPLOYEE",
 } as const;
 
 export type Role = typeof Roles[keyof typeof Roles];
@@ -56,45 +52,6 @@ export const PERMISSIONS = {
     settings: ["view:own", "configure:payment-rules"],
   },
 
-  [Roles.FINANCE_LEAD]: {
-    dashboard: ["view:all"],
-    employees: ["view:all"],
-    payroll: ["view:all", "create", "edit:draft", "approve"],
-    payments: [
-      "view:all",
-      "disburse",
-      "reconcile",
-      "retry",
-      "view:transactions",
-      "view:batches",
-    ],
-    leave: ["view:all", "approve"],
-    attendance: ["view:all"],
-    documents: ["view:all"],
-    reports: ["view:all", "export"],
-    settings: ["view:own"],
-  },
-
-  [Roles.CFO]: {
-    dashboard: ["view:all"],
-    employees: ["view:all"],
-    payroll: ["view:all", "create", "edit:draft", "approve"],
-    payments: [
-      "view:all",
-      "disburse",
-      "reconcile",
-      "retry",
-      "view:transactions",
-      "view:batches",
-      "configure:providers",
-    ],
-    leave: ["view:all", "approve"],
-    attendance: ["view:all"],
-    documents: ["view:all"],
-    reports: ["view:all", "export"],
-    settings: ["view:own", "configure:payment-rules"],
-  },
-
   [Roles.HR_ADMIN]: {
     dashboard: ["view:all"],
     employees: ["view:all", "create", "edit", "deactivate"],
@@ -113,17 +70,16 @@ export const PERMISSIONS = {
   },
 } as const;
 
-export type Permission = string; // e.g., "view:all", "create", "approve"
+export type Permission = string;
 
 export function hasPermission(
   role: Role,
   feature: string,
   action: string
 ): boolean {
-  const rolePerms = PERMISSIONS[role];
+  const rolePerms = PERMISSIONS[role as keyof typeof PERMISSIONS];
   if (!rolePerms) return false;
 
-  // Super admin has all
   if (role === Roles.SUPER_ADMIN) return true;
 
   const featurePerms = rolePerms[feature as keyof typeof rolePerms];
@@ -133,14 +89,18 @@ export function hasPermission(
 }
 
 export function canView(role: Role, resource: string): boolean {
-  return hasPermission(role, resource, "view:all") ||
+  return (
+    hasPermission(role, resource, "view:all") ||
     hasPermission(role, resource, "view:own") ||
-    hasPermission(role, resource, "view:own-dept");
+    hasPermission(role, resource, "view:own-dept")
+  );
 }
 
 export function canEdit(role: Role, resource: string): boolean {
-  return hasPermission(role, resource, "edit") ||
-    hasPermission(role, resource, "edit:draft");
+  return (
+    hasPermission(role, resource, "edit") ||
+    hasPermission(role, resource, "edit:draft")
+  );
 }
 
 export function canCreate(role: Role, resource: string): boolean {
@@ -163,7 +123,6 @@ export function canManagePaymentMethods(role: Role): boolean {
   return hasPermission(role, "payments", "add:payment-method");
 }
 
-// Visibility filters: What data should be returned based on role
 export function getVisibilityFilter(
   role: Role,
   userId: string,
@@ -171,13 +130,13 @@ export function getVisibilityFilter(
 ) {
   switch (role) {
     case Roles.EMPLOYEE:
-      return { userId }; // Only own data
+      return { userId };
     case Roles.MANAGER:
-      return deptId ? { departmentId: deptId } : { userId }; // Own dept
+      return deptId ? { departmentId: deptId } : { userId };
     case Roles.HR_ADMIN:
     case Roles.FINANCE:
     case Roles.SUPER_ADMIN:
-      return {}; // All data
+      return {};
     default:
       return { userId };
   }
@@ -187,8 +146,6 @@ export const ROLE_LABELS: Record<Role, string> = {
   [Roles.EMPLOYEE]: "Employee",
   [Roles.MANAGER]: "Manager",
   [Roles.FINANCE]: "Finance",
-  [Roles.FINANCE_LEAD]: "Finance Lead",
-  [Roles.CFO]: "CFO",
   [Roles.HR_ADMIN]: "HR Admin",
   [Roles.SUPER_ADMIN]: "Super Admin",
 } as const;
@@ -197,8 +154,6 @@ export const ROLE_DESCRIPTIONS: Record<Role, string> = {
   [Roles.EMPLOYEE]: "Can view own data, submit requests, manage payment methods",
   [Roles.MANAGER]: "Can view team data, approve team requests, view department reports",
   [Roles.FINANCE]: "Can manage payroll, disburse salaries, reconcile payments, view all reports",
-  [Roles.FINANCE_LEAD]: "Can initiate disbursements, reconcile payments, view financial reports",
-  [Roles.CFO]: "Full finance access including provider configuration and payment rules",
   [Roles.HR_ADMIN]: "Can manage employees, departments, leave policies, compliance settings",
   [Roles.SUPER_ADMIN]: "Full system access",
 } as const;

@@ -1,11 +1,18 @@
+import { redirect } from "next/navigation";
+import { getCurrentDbUser } from "@/lib/auth";
 import { Sidebar } from "@/app/components/layout/Sidebar";
 import { TopNav } from "@/app/components/layout/TopNav";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const user = await getCurrentDbUser();
+  if (!user) {
+    redirect("/onboarding");
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 flex-col lg:flex-row">
       <Sidebar />

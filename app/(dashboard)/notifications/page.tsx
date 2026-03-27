@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -98,7 +98,7 @@ export default function NotificationsPage() {
   };
 
   const getNotificationIcon = (type: string) => {
-    const icons: Record<string, JSX.Element> = {
+    const icons: Record<string, React.ReactElement> = {
       LEAVE_APPROVED: <CheckCircle className="w-5 h-5 text-green-600" />,
       LEAVE_REJECTED: <AlertCircle className="w-5 h-5 text-red-600" />,
       PAYSLIP_AVAILABLE: <DollarSign className="w-5 h-5 text-green-600" />,

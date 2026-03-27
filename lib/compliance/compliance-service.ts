@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { ComplianceType, ComplianceStatus } from "@prisma/client";
+import { ComplianceType, ComplianceStatus } from "@/lib/generated/prisma";
 
 export interface ComplianceData {
   type: ComplianceType;

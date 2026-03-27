@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { DocumentType } from "@prisma/client";
+import { DocumentType } from "@/lib/generated/prisma";
 
 export interface DocumentMetadata {
   name: string;
