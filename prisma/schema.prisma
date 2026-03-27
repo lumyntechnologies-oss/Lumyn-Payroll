@@ -61,29 +61,29 @@ model Employee {
   department     Department      @relation(fields: [departmentId], references: [id])
   leaveBalances  LeaveBalance[]
   leaveRequests  LeaveRequest[]
+  paymentMethods PaymentMethod[]
   payrollEntries PayrollEntry[]
   salaryAdvances SalaryAdvance[]
   wallet         Wallet?
-  paymentMethods PaymentMethod[]
 
   @@map("employees")
 }
 
 model PaymentMethod {
-  id           String     @id @default(cuid())
-  employeeId   String
-  type         PaymentType
-  bankCode     String?
+  id            String      @id @default(cuid())
+  employeeId    String
+  type          PaymentType
+  bankCode      String?
   accountNumber String?
-  accountName  String?
-  mpesaNumber  String?
-  swiftCode    String?
-  iban         String?
-  primary      Boolean    @default(false)
-  verified     Boolean    @default(false)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  employee     Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  accountName   String?
+  mpesaNumber   String?
+  swiftCode     String?
+  iban          String?
+  primary       Boolean     @default(false)
+  verified      Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  employee      Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([employeeId, primary], name: "one_primary_per_employee")
   @@map("payment_methods")
@@ -286,16 +286,16 @@ model PayrollConfig {
 }
 
 model LeavePolicy {
-  id              String   @id @default(cuid())
-  annualLeaveDays Int      @default(20)
-  sickLeaveDays   Int      @default(10)
-  maternityDays   Int      @default(90)
-  paternityDays   Int      @default(7)
-  carryoverDays   Int      @default(5)
-  carryoverExpiry Int      @default(12)
-  requiresApproval Boolean @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               String   @id @default(cuid())
+  annualLeaveDays  Int      @default(20)
+  sickLeaveDays    Int      @default(10)
+  maternityDays    Int      @default(90)
+  paternityDays    Int      @default(7)
+  carryoverDays    Int      @default(5)
+  carryoverExpiry  Int      @default(12)
+  requiresApproval Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@map("leave_policies")
 }
@@ -307,7 +307,7 @@ model AttendanceRule {
   lateThreshold      Int      @default(15)
   absentThreshold    Int      @default(30)
   overtimeMultiplier Float    @default(1.5)
-  autoMarkAttendance Boolean @default(false)
+  autoMarkAttendance Boolean  @default(false)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -315,62 +315,62 @@ model AttendanceRule {
 }
 
 model RolePermission {
-  id         String   @id @default(cuid())
-  role       String
-  resource   String
-  action     String
-  granted    Boolean @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(cuid())
+  role      String
+  resource  String
+  action    String
+  granted   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([role, resource, action])
   @@map("role_permissions")
 }
 
 model Integration {
-  id           String   @id @default(cuid())
-  name         String   @unique
+  id           String    @id @default(cuid())
+  name         String    @unique
   type         String
-  isActive     Boolean @default(false)
+  isActive     Boolean   @default(false)
   credentials  String?
   apiKey       String?
   webhookUrl   String?
   lastSyncAt   DateTime?
-  syncInterval Int      @default(3600)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  syncInterval Int       @default(3600)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@map("integrations")
 }
 
 model Wallet {
-  id              String              @id @default(cuid())
-  employeeId      String              @unique
-  balance         Float               @default(0)
-  currency        String              @default("KES")
-  lastTopupAt     DateTime?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  employee        Employee            @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  transactions    WalletTransaction[]
+  id           String              @id @default(cuid())
+  employeeId   String              @unique
+  balance      Float               @default(0)
+  currency     String              @default("KES")
+  lastTopupAt  DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  transactions WalletTransaction[]
+  employee     Employee            @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@map("wallets")
 }
 
 model WalletTransaction {
-  id                String              @id @default(cuid())
-  walletId          String
-  type              WalletTransactionType
-  amount            Float
-  balanceBefore     Float
-  balanceAfter      Float
-  status            TransactionStatus   @default(PENDING)
-  paymentReference  String?
-  pesapalReference  String?
-  description       String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  wallet            Wallet              @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  id               String                @id @default(cuid())
+  walletId         String
+  type             WalletTransactionType
+  amount           Float
+  balanceBefore    Float
+  balanceAfter     Float
+  status           TransactionStatus     @default(PENDING)
+  paymentReference String?
+  pesapalReference String?
+  description      String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  wallet           Wallet                @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
   @@map("wallet_transactions")
 }

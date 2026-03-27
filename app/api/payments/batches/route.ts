@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const disbursedRuns = await prisma.payrollRun.findMany({
-      where: { status: { in: ["PAID", "DISBURSED", "COMPLETED"] } },
+      where: { status: { in: ["DISBURSED"] } },
       orderBy: { updatedAt: "desc" },
       take: 20,
       select: {
@@ -33,10 +33,12 @@ export async function GET(req: NextRequest) {
       },
     });
 
+
     const batches = disbursedRuns.map((run) => ({
       id: `batch_${run.id}`,
       payrollRunId: run.id,
-      status: run.status === "PAID" ? "COMPLETED" : run.status,
+      status: run.status,
+
       totalAmount: Number(run.totalNet),
       employeeCount: run._count.entries,
       sentAt: run.updatedAt,

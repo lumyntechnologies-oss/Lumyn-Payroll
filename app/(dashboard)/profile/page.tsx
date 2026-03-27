@@ -1,14 +1,40 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
-import { Button } from "@/app/components/ui/button";
-import { Lock, User, FileText, Download } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { User, Mail, Phone, Banknote, CreditCard, Save, CheckCircle, DollarSign } from "lucide-react";
+// import { PaymentType } from "@prisma/client/runtime/library";
 
-export default function EmployeeProfilePage() {
-  const [profile, setProfile] = useState<any>(null);
+interface Profile {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  jobTitle: string;
+  basicSalary: number;
+  department: string;
+  hireDate: string;
+}
+
+interface PaymentMethod {
+  id: string;
+  type: string;
+  accountNumber: string;
+  primary: boolean;
+}
+
+
+export default function ProfilePage() {
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("personal");
+  const [editing, setEditing] = useState(false);
+const [formData, setFormData] = useState<Profile>({ firstName: '', lastName: '', email: '', phone: '', jobTitle: '', basicSalary: 0, department: '', hireDate: '' });
 
   useEffect(() => {
     fetchProfile();
@@ -16,11 +42,21 @@ export default function EmployeeProfilePage() {
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch("/api/profile");
-      const data = await response.json();
-      if (data.success) {
-        setProfile(data.data);
+      setLoading(true);
+      const [profileRes, paymentsRes] = await Promise.all([
+        fetch("/api/profile"),
+        fetch("/api/payments/methods"),
+      ]);
+      if (profileRes.ok) {
+        const data = await profileRes.json();
+        setProfile(data);
+        setFormData(data);
       }
+      if (paymentsRes.ok) {
+        const data = await paymentsRes.json();
+        setPaymentMethods(Array.isArray(data) ? data : data.paymentMethods || []);
+      }
+
     } catch (error) {
       console.error("Failed to fetch profile:", error);
     } finally {
@@ -28,179 +64,152 @@ export default function EmployeeProfilePage() {
     }
   };
 
-  if (loading) {
-    return <div className="text-center py-12">Loading...</div>;
-  }
+  const saveProfile = async () => {
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      if (res.ok) {
+        setEditing(false);
+        fetchProfile();
+      }
+    } catch (error) {
+      console.error("Failed to save profile:", error);
+    }
+  };
+
+  if (loading) return <div>Loading profile...</div>;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">My Profile</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Manage your personal information and preferences</p>
+      <div className="flex items-center gap-4">
+        <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+          <User className="w-10 h-10 text-white" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold">{profile?.firstName} {profile?.lastName}</h1>
+          <p className="text-muted-foreground">{profile?.jobTitle} • {profile?.department}</p>
+        </div>
       </div>
 
-      <div className="flex gap-2 border-b border-slate-200">
-        <button
-          onClick={() => setActiveTab("personal")}
-          className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
-            activeTab === "personal"
-              ? "border-blue-500 text-blue-600"
-              : "border-transparent text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          <User className="w-4 h-4 inline mr-2" />
-          Personal Information
-        </button>
-        <button
-          onClick={() => setActiveTab("security")}
-          className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
-            activeTab === "security"
-              ? "border-blue-500 text-blue-600"
-              : "border-transparent text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          <Lock className="w-4 h-4 inline mr-2" />
-          Security
-        </button>
-        <button
-          onClick={() => setActiveTab("documents")}
-          className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
-            activeTab === "documents"
-              ? "border-blue-500 text-blue-600"
-              : "border-transparent text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          <FileText className="w-4 h-4 inline mr-2" />
-          My Documents
-        </button>
-      </div>
-
-      {activeTab === "personal" && (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Profile Details */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Personal Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-                <input
-                  type="text"
-                  value={profile?.name || ""}
-                  disabled
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-                <input
-                  type="email"
-                  value={profile?.email || ""}
-                  disabled
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Employee ID</label>
-                <input
-                  type="text"
-                  value={profile?.employeeId || "N/A"}
-                  disabled
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Department</label>
-                <input
-                  type="text"
-                  value={profile?.department?.name || "N/A"}
-                  disabled
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600"
-                />
-              </div>
-            </div>
-            <p className="text-xs text-slate-500 mt-4">Contact HR to update personal information</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {activeTab === "security" && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Security Settings</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-blue-900">
-                Password and authentication are managed through your account settings. Click below to manage your Clerk account.
-              </p>
-            </div>
-            <Button variant="outline" className="w-full">
-              Manage Account Security
+            <CardTitle>Profile Information</CardTitle>
+            <Button variant="ghost" onClick={() => setEditing(!editing)}>
+              {editing ? 'Cancel' : 'Edit Profile'}
             </Button>
-            <div className="mt-6 p-4 bg-slate-50 rounded-lg">
-              <h3 className="font-medium text-slate-900 mb-2">Two-Factor Authentication</h3>
-              <p className="text-sm text-slate-600 mb-4">
-                Enable 2FA for additional security when accessing sensitive features like salary disbursement approvals.
-              </p>
-              <Button variant="outline">Enable 2FA</Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {activeTab === "documents" && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">My Documents</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
-                <div className="flex items-center gap-3">
-                  <FileText className="w-6 h-6 text-blue-500" />
-                  <div>
-                    <p className="font-medium text-slate-900">My Payslips</p>
-                    <p className="text-xs text-slate-500">View and download your salary records</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
-                  View
-                </Button>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>First Name</Label>
+                <Input value={formData.firstName || ''} onChange={(e) => setFormData({...formData, firstName: e.target.value})} disabled={!editing} />
               </div>
-
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
-                <div className="flex items-center gap-3">
-                  <FileText className="w-6 h-6 text-green-500" />
-                  <div>
-                    <p className="font-medium text-slate-900">P9 Tax Form</p>
-                    <p className="text-xs text-slate-500">Annual tax withholding statement</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
-                  Download
-                </Button>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
-                <div className="flex items-center gap-3">
-                  <FileText className="w-6 h-6 text-purple-500" />
-                  <div>
-                    <p className="font-medium text-slate-900">Employment Certificate</p>
-                    <p className="text-xs text-slate-500">Official employment verification letter</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
-                  Request
-                </Button>
+              <div className="space-y-2">
+                <Label>Last Name</Label>
+                <Input value={formData.lastName || ''} onChange={(e) => setFormData({...formData, lastName: e.target.value})} disabled={!editing} />
               </div>
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input value={formData.email || ''} disabled />
+              </div>
+              <div className="space-y-2">
+                <Label>Phone</Label>
+                <Input value={formData.phone || ''} onChange={(e) => setFormData({...formData, phone: e.target.value})} disabled={!editing} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Department</Label>
+                <Input value={profile?.department} disabled />
+              </div>
+              <div className="space-y-2">
+                <Label>Hire Date</Label>
+                <Input value={profile?.hireDate} disabled />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Basic Salary</Label>
+              <div className="flex items-center gap-2">
+                <Banknote className="w-5 h-5" />
+                <Input type="number" value={formData.basicSalary || ''} onChange={(e) => setFormData({...formData, basicSalary: parseFloat(e.target.value)})} disabled={!editing} className="flex-1" />
+              </div>
+            </div>
+            {editing && (
+              <Button className="w-full" onClick={saveProfile}>
+                <Save className="w-4 h-4 mr-2" />
+                Save Changes
+              </Button>
+            )}
           </CardContent>
         </Card>
-      )}
+
+        {/* Payment Methods */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment Methods</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {paymentMethods.map((method) => (
+                <div key={method.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <CreditCard className="w-5 h-5" />
+                    <div>
+                      <p className="font-medium">{method.type}</p>
+                      <p className="text-sm text-muted-foreground">**** {method.accountNumber.slice(-4)}</p>
+                    </div>
+                  </div>
+                  <Badge variant={method.primary ? "default" : "secondary"}>{method.primary ? "Primary" : "Secondary"}</Badge>
+                </div>
+              ))}
+              {paymentMethods.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No payment methods added
+                </div>
+              )}
+            </div>
+            <Button className="mt-6 w-full" variant="outline">
+              + Add Payment Method
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Account Status</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+            <h3 className="font-medium">Profile Verified</h3>
+            <p className="text-sm text-muted-foreground mt-1">All information verified</p>
+          </div>
+          <div className="text-center">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <DollarSign className="w-8 h-8 text-blue-600" />
+            </div>
+            <h3 className="font-medium">Salary Setup</h3>
+            <p className="text-sm text-muted-foreground mt-1">Payment method configured</p>
+          </div>
+          <div className="text-center">
+            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Mail className="w-8 h-8 text-yellow-600" />
+            </div>
+            <h3 className="font-medium">Notifications</h3>
+            <p className="text-sm text-muted-foreground mt-1">Email & SMS enabled</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

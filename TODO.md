@@ -1,12 +1,20 @@
-<!-- # Wallet API Clerk Error Fix - COMPLETE
+<!-- # Dashboard Pages Implementation TODO
 
-## Plan Steps:
-- [x] Step 1: Edit `app/api/wallet/balance/route.ts` ✅
-- [x] Step 2: Edit `app/api/wallet/transactions/route.ts` ✅ Fixed import errors
-- [x] Step 3: Edit `app/api/wallet/topup/route.ts` ✅ Fixed imports
-- [x] Step 4: TypeScript clean
-- [x] Step 5: Ready
+## Plan: Implement 8 priority dashboard pages matching sidebar nav items
+Status: [✅] 3/8 Complete
 
-**Fixed**: Replaced unsafe `currentUser()` with `getCurrentDbUser()` in all wallet APIs.
+1. [✅] `app/(dashboard)/page.tsx` - Overview dashboard (stats, recent activity)
+2. [✅] `app/(dashboard)/employees/page.tsx` - Employees list/table + Add dialog  
+4. [✅] `app/(dashboard)/payroll/page.tsx` - Payroll runs list + Create run modal
+5. [ ] `app/(dashboard)/attendance/page.tsx` - Attendance calendar + today stats
+6. [ ] `app/(dashboard)/leave/page.tsx` - Leave requests table + balances cards
+7. [ ] `app/(dashboard)/reports/page.tsx` - Reports/charts + exports
+8. [ ] `app/(dashboard)/profile/page.tsx` - Profile edit + payment methods
 
-**Test**: `rm -rf .next && npm run dev`, load `/wallet` - no 500 errors. -->
+## Next Steps After Completion
+- Test: `npm run dev` → navigate /dashboard/*
+- Seed: `npm run db:seed`
+- Polish: Add modals, real-time updates (optional)
+
+Updated when steps complete.
+ --> -->

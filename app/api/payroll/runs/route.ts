@@ -30,7 +30,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { month, year } = body;
+    const month = Number(body.month);
+    const year = Number(body.year);
 
     // Validate input
     if (!month || !year) {
@@ -41,8 +42,14 @@ export async function POST(req: NextRequest) {
     }
 
     const existing = await prisma.payrollRun.findUnique({
-      where: { month_year: { month, year } },
+      where: { 
+        month_year: { 
+          month: month as any, 
+          year 
+        } 
+      },
     });
+
     if (existing) {
       return errorResponse("Payroll run already exists for this period", 400);
     }

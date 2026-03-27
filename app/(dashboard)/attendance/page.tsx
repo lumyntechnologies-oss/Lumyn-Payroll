@@ -1,205 +1,211 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { Users, UserX, Clock, TrendingUp, Loader2, Plus, X } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
-import { Badge } from "@/app/components/ui/badge";
-import { Button } from "@/app/components/ui/button";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Clock, Play, Pause, Calendar, TrendingUp } from "lucide-react";
 
 interface AttendanceRecord {
   id: string;
+  employeeId: string;
+  employeeName: string;
   date: string;
   clockIn?: string;
   clockOut?: string;
   status: string;
   overtime: number;
-  employee: { id: string; firstName: string; lastName: string; employeeId: string; department: { name: string } };
 }
 
-interface Summary { present: number; absent: number; late: number }
-
-const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "secondary"> = {
-  PRESENT: "success", ABSENT: "danger", LATE: "warning", HALF_DAY: "secondary", ON_LEAVE: "secondary"
-};
+interface TodayStats {
+  present: number;
+  late: number;
+  absent: number;
+  total: number;
+  rate: number;
+}
 
 export default function AttendancePage() {
-  const [records, setRecords] = useState<AttendanceRecord[]>([]);
-  const [summary, setSummary] = useState<Summary>({ present: 0, absent: 0, late: 0 });
+  const [todayStats, setTodayStats] = useState<TodayStats | null>(null);
+  const [recentRecords, setRecentRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [showAdd, setShowAdd] = useState(false);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams({ date });
-    const res = await fetch(`/api/attendance?${params}`);
-    const json = await res.json();
-    if (json.success) {
-      setRecords(json.data.records);
-      setSummary(json.data.summary);
-    }
-    setLoading(false);
-  }, [date]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  const metrics = [
-    { label: "Present Today", value: summary.present, icon: Users, color: "green" },
-    { label: "Absent", value: summary.absent, icon: UserX, color: "red" },
-    { label: "Late Arrivals", value: summary.late, icon: Clock, color: "amber" },
-    { label: "Overtime Hours", value: records.reduce((s, r) => s + r.overtime, 0).toFixed(1) + "h", icon: TrendingUp, color: "blue" },
-  ];
-
-  const colorMap: Record<string, string> = { green: "bg-green-100 text-green-600", red: "bg-red-100 text-red-600", amber: "bg-amber-100 text-amber-600", blue: "bg-blue-100 text-blue-600" };
-
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Attendance Management</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{new Date(date).toLocaleDateString("en-KE", { dateStyle: "full" })}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <input type="date" value={date} onChange={e => setDate(e.target.value)}
-            className="border border-slate-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          <Button onClick={() => setShowAdd(true)}><Plus className="w-4 h-4" /> Record Attendance</Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-4 gap-4">
-        {metrics.map(m => {
-          const Icon = m.icon;
-          return (
-            <Card key={m.label}>
-              <CardContent className="p-5 flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-lg ${colorMap[m.color]} flex items-center justify-center`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-xl font-bold text-slate-900">{m.value}</p>
-                  <p className="text-xs text-slate-500">{m.label}</p>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      <Card>
-        <CardHeader><CardTitle className="text-sm">Attendance Log</CardTitle></CardHeader>
-        <div className="overflow-x-auto">
-          {loading ? (
-            <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
-          ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-100">
-                  {["Employee", "Dept", "Date", "Clock In", "Clock Out", "Hours", "Overtime", "Status"].map(h => (
-                    <th key={h} className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {records.length === 0 ? (
-                  <tr><td colSpan={8} className="px-5 py-12 text-center text-slate-400 text-sm">No attendance records for this date</td></tr>
-                ) : records.map(row => {
-                  const clockIn = row.clockIn ? new Date(row.clockIn) : null;
-                  const clockOut = row.clockOut ? new Date(row.clockOut) : null;
-                  const hours = clockIn && clockOut ? ((clockOut.getTime() - clockIn.getTime()) / 3600000).toFixed(1) + "h" : "-";
-                  return (
-                    <tr key={row.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-5 py-3.5">
-                        <div>
-                          <p className="text-sm font-medium text-slate-800">{row.employee.firstName} {row.employee.lastName}</p>
-                          <p className="text-xs text-slate-400">{row.employee.employeeId}</p>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5 text-sm text-slate-500">{row.employee.department.name}</td>
-                      <td className="px-5 py-3.5 text-sm text-slate-600">{new Date(row.date).toLocaleDateString()}</td>
-                      <td className="px-5 py-3.5 text-sm text-slate-600">{clockIn ? clockIn.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-"}</td>
-                      <td className="px-5 py-3.5 text-sm text-slate-600">{clockOut ? clockOut.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-"}</td>
-                      <td className="px-5 py-3.5 text-sm text-slate-600">{hours}</td>
-                      <td className="px-5 py-3.5 text-sm text-blue-600 font-medium">{row.overtime > 0 ? `${row.overtime}h` : "-"}</td>
-                      <td className="px-5 py-3.5"><Badge variant={STATUS_VARIANT[row.status]}>{row.status.replace("_", " ")}</Badge></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </Card>
-
-      {showAdd && <AttendanceModal date={date} onClose={() => setShowAdd(false)} onSaved={fetchData} />}
-    </div>
-  );
-}
-
-function AttendanceModal({ date, onClose, onSaved }: { date: string, onClose: () => void, onSaved: () => void }) {
-  const [employees, setEmployees] = useState<{id: string; firstName: string; lastName: string}[]>([]);
-  const [form, setForm] = useState({ employeeId: "", date, clockIn: "", clockOut: "", status: "PRESENT", overtime: "0" });
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch("/api/employees?limit=200").then(r => r.json()).then(j => { if (j.success) setEmployees(j.data.employees); });
+    fetchAttendanceData();
   }, []);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault(); setSaving(true);
-    const body = {
-      employeeId: form.employeeId,
-      date: form.date,
-      clockIn: form.clockIn ? `${form.date}T${form.clockIn}` : undefined,
-      clockOut: form.clockOut ? `${form.date}T${form.clockOut}` : undefined,
-      status: form.status,
-      overtime: Number(form.overtime),
-    };
-    const res = await fetch("/api/attendance", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const json = await res.json();
-    setSaving(false);
-    if (json.success) { onSaved(); onClose(); }
+  const fetchAttendanceData = async () => {
+    try {
+      setLoading(true);
+      const [statsRes, recordsRes] = await Promise.all([
+        fetch("/api/attendance/today"),
+        fetch("/api/attendance/history?limit=20"),
+      ]);
+      if (statsRes.ok) setTodayStats(await statsRes.json());
+      if (recordsRes.ok) setRecentRecords(await recordsRes.json());
+    } catch (error) {
+      console.error("Failed to fetch attendance data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clockIn = async () => {
+    try {
+      await fetch("/api/attendance/clock-in", { method: "POST" });
+      fetchAttendanceData();
+    } catch (error) {
+      console.error("Clock in failed:", error);
+    }
+  };
+
+  const clockOut = async () => {
+    try {
+      await fetch("/api/attendance/clock-out", { method: "POST" });
+      fetchAttendanceData();
+    } catch (error) {
+      console.error("Clock out failed:", error);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const variant = status === 'PRESENT' ? "default" : status === 'LATE' ? "secondary" : "destructive";
+    return <Badge variant={variant}>{status}</Badge>;
+  };
+
+  if (loading) {
+    return <div>Loading attendance...</div>;
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between p-5 border-b border-slate-100">
-          <h2 className="text-base font-bold text-slate-900">Record Attendance</h2>
-          <button onClick={onClose}><X className="w-5 h-5 text-slate-500" /></button>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Clock className="w-8 h-8" />
+            Attendance
+          </h1>
+          <p className="text-muted-foreground">Track employee attendance and overtime</p>
         </div>
-        <form onSubmit={submit} className="p-5 space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Employee</label>
-            <select required value={form.employeeId} onChange={e => setForm(f => ({ ...f, employeeId: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">Select employee...</option>
-              {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</option>)}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="block text-xs font-medium text-slate-600 mb-1">Clock In</label>
-              <input type="time" value={form.clockIn} onChange={e => setForm(f => ({ ...f, clockIn: e.target.value }))}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
-            <div><label className="block text-xs font-medium text-slate-600 mb-1">Clock Out</label>
-              <input type="time" value={form.clockOut} onChange={e => setForm(f => ({ ...f, clockOut: e.target.value }))}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="block text-xs font-medium text-slate-600 mb-1">Status</label>
-              <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                {["PRESENT","ABSENT","LATE","HALF_DAY","ON_LEAVE"].map(s => <option key={s} value={s}>{s.replace("_"," ")}</option>)}
-              </select></div>
-            <div><label className="block text-xs font-medium text-slate-600 mb-1">Overtime (hrs)</label>
-              <input type="number" min="0" step="0.5" value={form.overtime} onChange={e => setForm(f => ({ ...f, overtime: e.target.value }))}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
-          </div>
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
-            <Button type="submit" className="flex-1" disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}</Button>
-          </div>
-        </form>
+        <div className="flex gap-2">
+          <Button onClick={clockOut} variant="outline">
+            <Pause className="w-4 h-4 mr-2" />
+            Clock Out
+          </Button>
+          <Button onClick={clockIn}>
+            <Play className="w-4 h-4 mr-2" />
+            Clock In
+          </Button>
+        </div>
       </div>
+
+      {/* Today Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg">Today</CardTitle>
+            <Calendar className="w-6 h-6" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{todayStats ? `${todayStats.rate}%` : '--'}</div>
+            <Progress value={todayStats?.rate || 0} className="mt-4" />
+            <p className="text-sm text-muted-foreground mt-2">
+              {todayStats ? `${todayStats.present}/${todayStats.total} present` : 'Loading...'}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Present</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{todayStats?.present || 0}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Late</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{todayStats?.late || 0}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Absent</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-destructive">{todayStats?.absent || 0}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Records */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Attendance Records</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Employee</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Clock In</TableHead>
+                <TableHead>Clock Out</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Overtime (hrs)</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recentRecords.map((record) => (
+                <TableRow key={record.id}>
+                  <TableCell className="font-medium">{record.employeeName}</TableCell>
+                  <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
+                  <TableCell>{record.clockIn || '-'}</TableCell>
+                  <TableCell>{record.clockOut || '-'}</TableCell>
+                  <TableCell>{getStatusBadge(record.status)}</TableCell>
+                  <TableCell>{record.overtime.toFixed(1)}</TableCell>
+                </TableRow>
+              ))}
+              {recentRecords.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    No attendance records found
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Overtime Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Overtime Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+            <div>
+              <div className="text-3xl font-bold text-primary mb-2">12.5</div>
+              <p className="text-muted-foreground">Total hours this week</p>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-primary mb-2">KES 3,750</div>
+              <p className="text-muted-foreground">Pending payout</p>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-primary mb-2">+15%</div>
+              <p className="text-muted-foreground">vs last month</p>
+              <TrendingUp className="w-8 h-8 mx-auto text-green-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
