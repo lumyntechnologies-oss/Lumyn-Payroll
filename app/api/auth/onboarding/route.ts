@@ -2,10 +2,21 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { Role } from "@/lib/generated/prisma";
+import { withAuthRateLimit } from "@/lib/rate-limit";
 
 const ALLOWED_SELF_ROLES: Role[] = [Role.EMPLOYEE, Role.MANAGER, Role.HR_ADMIN, Role.FINANCE];
 
-export async function GET() {
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for') ?? 'anonymous';
+  const identifier = `auth-onboard-get:${ip}`;
+  
+  const rateLimitResult = await withAuthRateLimit(identifier);
+  if (!rateLimitResult.pass) {
+    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429, headers: { 'Retry-After': rateLimitResult.reset } });
+  }
+
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -15,6 +26,14 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for') ?? 'anonymous';
+  const identifier = `auth-onboard-post:${ip}`;
+  
+  const rateLimitResult = await withAuthRateLimit(identifier);
+  if (!rateLimitResult.pass) {
+    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429, headers: { 'Retry-After': rateLimitResult.reset } });
+  }
+
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

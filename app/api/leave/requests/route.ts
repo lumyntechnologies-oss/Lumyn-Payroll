@@ -42,18 +42,24 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    const startDate = new Date(body.startDate);
-    const endDate = new Date(body.endDate);
-    const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    // TODO: Add leave request schema in lib/validations/leave.ts
+    const { employeeId, leaveTypeId, startDate, endDate, reason } = body;
+    if (!employeeId || !leaveTypeId || !startDate || !endDate) {
+      return errorResponse("Missing required fields: employeeId, leaveTypeId, startDate, endDate", 400);
+    }
+
+    const sDate = new Date(startDate);
+    const eDate = new Date(endDate);
+    const days = Math.ceil((eDate.getTime() - sDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
     const request = await prisma.leaveRequest.create({
       data: {
-        employeeId: body.employeeId,
-        leaveTypeId: body.leaveTypeId,
-        startDate,
-        endDate,
+        employeeId,
+        leaveTypeId,
+        startDate: sDate,
+        endDate: eDate,
         days,
-        reason: body.reason,
+        reason,
         status: "PENDING",
       },
       include: {

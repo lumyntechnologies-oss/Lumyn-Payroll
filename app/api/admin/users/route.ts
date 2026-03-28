@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentDbUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { Role } from "@/lib/generated/prisma";
+import { Role } from "@prisma/client";
+import { updateUserRoleSchema } from "@/lib/validations/admin";
 
 const ALLOWED_ROLES: Role[] = [Role.SUPER_ADMIN, Role.HR_ADMIN];
 
@@ -33,11 +34,16 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { userId, role } = body;
-
-  if (!userId || !role || !Object.values(Role).includes(role)) {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  const validationResult = updateUserRoleSchema.safeParse(body);
+  
+  if (!validationResult.success) {
+    return NextResponse.json(
+      { error: "Invalid payload", details: validationResult.error.flatten().fieldErrors },
+      { status: 400 }
+    );
   }
+
+  const { userId, role } = validationResult.data;
 
   const target = await prisma.user.findUnique({ where: { id: userId } });
   if (!target) {

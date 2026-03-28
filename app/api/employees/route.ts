@@ -54,27 +54,17 @@ export async function GET(req: NextRequest) {
   }
 }
 
+import { createEmployeeSchema, CreateEmployeeInput } from "@/lib/validations/employees";
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body: CreateEmployeeInput = await req.json();
 
-    // Validate required fields
-    const requiredFields = ["firstName", "lastName", "email", "departmentId", "jobTitle", "hireDate", "basicSalary"];
-    const missingFields = requiredFields.filter((field) => !body[field]);
-
-    if (missingFields.length > 0) {
-      return errorResponse(`Missing required fields: ${missingFields.join(", ")}`, 400);
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(body.email)) {
-      return errorResponse("Invalid email format", 400);
-    }
+    const data = createEmployeeSchema.parse(body);
 
     // Check if email already exists
     const existingEmployee = await prisma.employee.findUnique({
-      where: { email: body.email },
+      where: { email: data.email },
     });
 
     if (existingEmployee) {
@@ -83,7 +73,7 @@ export async function POST(req: NextRequest) {
 
     // Check if department exists
     const department = await prisma.department.findUnique({
-      where: { id: body.departmentId },
+      where: { id: data.departmentId },
     });
 
     if (!department) {
@@ -96,26 +86,26 @@ export async function POST(req: NextRequest) {
     const employee = await prisma.employee.create({
       data: {
         employeeId,
-        firstName: body.firstName.trim(),
-        lastName: body.lastName.trim(),
-        email: body.email.trim().toLowerCase(),
-        phone: body.phone?.trim(),
-        nationalId: body.nationalId?.trim(),
-        kraPin: body.kraPin?.trim(),
-        nssfNumber: body.nssfNumber?.trim(),
-        nhifNumber: body.nhifNumber?.trim(),
-        dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : undefined,
-        gender: body.gender,
-        departmentId: body.departmentId,
-        jobTitle: body.jobTitle.trim(),
-        employmentType: body.employmentType ?? "FULL_TIME",
-        hireDate: new Date(body.hireDate),
+        firstName: data.firstName.trim(),
+        lastName: data.lastName.trim(),
+        email: data.email.trim().toLowerCase(),
+        phone: data.phone?.trim(),
+        nationalId: data.nationalId?.trim(),
+        kraPin: data.kraPin?.trim(),
+        nssfNumber: data.nssfNumber?.trim(),
+        nhifNumber: data.nhifNumber?.trim(),
+        dateOfBirth: data.dateOfBirth,
+        gender: data.gender,
+        departmentId: data.departmentId,
+        jobTitle: data.jobTitle.trim(),
+        employmentType: data.employmentType,
+        hireDate: data.hireDate,
         status: "ACTIVE",
-        basicSalary: Math.max(0, Number(body.basicSalary)),
-        bankName: body.bankName?.trim(),
-        bankAccount: body.bankAccount?.trim(),
-        bankBranch: body.bankBranch?.trim(),
-        mpesaNumber: body.mpesaNumber?.trim(),
+        basicSalary: data.basicSalary,
+        bankName: data.bankName?.trim(),
+        bankAccount: data.bankAccount?.trim(),
+        bankBranch: data.bankBranch?.trim(),
+        mpesaNumber: data.mpesaNumber?.trim(),
       },
       include: { department: true },
     });

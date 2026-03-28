@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { checkRoleMiddleware } from "@/lib/middleware/role-check";
+import { updatePaymentMethodSchema } from "@/lib/validations/payments";
 
 /**
  * DELETE /api/payments/methods/[id]
@@ -66,6 +67,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const context = roleCheck.context!;
   const { id } = await params;
   const body = await req.json();
+  const validationResult = updatePaymentMethodSchema.safeParse(body);
+  
+  if (!validationResult.success) {
+    return NextResponse.json(
+      { error: "Invalid payload", details: validationResult.error.flatten().fieldErrors },
+      { status: 400 }
+    );
+  }
 
   try {
     const method = await prisma.paymentMethod.findUnique({

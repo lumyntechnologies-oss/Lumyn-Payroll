@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../lib/generated/prisma"
 }
 
 datasource db {
@@ -16,6 +15,9 @@ model User {
   clerkId   String   @unique
   name      String
 
+  @@index([clerkId])
+  @@index([email])
+  @@index([role])
   @@map("users")
 }
 
@@ -66,6 +68,9 @@ model Employee {
   salaryAdvances SalaryAdvance[]
   wallet         Wallet?
 
+  @@index([departmentId])
+  @@index([status])
+  @@index([hireDate])
   @@map("employees")
 }
 
@@ -104,7 +109,9 @@ model PayrollRun {
   entries     PayrollEntry[]
 
   @@unique([month, year])
+  @@index([status, disbursedAt])
   @@map("payroll_runs")
+
 }
 
 model PayrollEntry {
@@ -126,6 +133,8 @@ model PayrollEntry {
   payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id])
 
   @@unique([payrollRunId, employeeId])
+  @@index([payrollRunId])
+  @@index([employeeId])
   @@map("payroll_entries")
 }
 
@@ -142,7 +151,12 @@ model Attendance {
   employee   Employee         @relation(fields: [employeeId], references: [id])
 
   @@unique([employeeId, date])
+  @@index([employeeId])
+  @@index([date])
+  @@index([status])
+  @@index([status, date])
   @@map("attendances")
+
 }
 
 model LeaveType {
@@ -174,6 +188,10 @@ model LeaveRequest {
   employee    Employee      @relation(fields: [employeeId], references: [id])
   leaveType   LeaveType     @relation(fields: [leaveTypeId], references: [id])
 
+  @@index([employeeId])
+  @@index([leaveTypeId])
+  @@index([status])
+  @@index([startDate])
   @@map("leave_requests")
 }
 
@@ -235,6 +253,9 @@ model Document {
   updatedAt  DateTime     @updatedAt
   employee   Employee?    @relation(fields: [employeeId], references: [id])
 
+  @@index([employeeId])
+  @@index([type])
+  @@index([uploadedAt])
   @@map("documents")
 }
 
@@ -372,6 +393,10 @@ model WalletTransaction {
   updatedAt        DateTime              @updatedAt
   wallet           Wallet                @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
+  @@index([walletId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
   @@map("wallet_transactions")
 }
 

@@ -1,6 +1,7 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { successResponse, errorResponse, validationError } from "@/lib/api-helpers";
+import { createDepartmentSchema } from "@/lib/validations/departments";
 
 export async function GET() {
   try {
@@ -18,28 +19,20 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    const validationResult = createDepartmentSchema.safeParse(body);
 
-    // Validation
-    if (!body.name || typeof body.name !== "string") {
-      return validationError("Department name is required and must be a string", "name");
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: validationResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
 
-    const name = body.name.trim();
-    if (name.length === 0) {
-      return validationError("Department name cannot be empty", "name");
-    }
-
-    if (name.length < 2) {
-      return validationError("Department name must be at least 2 characters", "name");
-    }
-
-    if (name.length > 100) {
-      return validationError("Department name must not exceed 100 characters", "name");
-    }
+    const { name, description } = validationResult.data;
 
     // Check for duplicate
     const existing = await prisma.department.findUnique({
-      where: { name: name },
+      where: { name },
     });
 
     if (existing) {
@@ -48,8 +41,8 @@ export async function POST(req: NextRequest) {
 
     const dept = await prisma.department.create({
       data: {
-        name: name,
-        description: body.description?.trim() || null,
+        name,
+        description: description || null,
       },
       include: { _count: { select: { employees: true } } },
     });

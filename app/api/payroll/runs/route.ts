@@ -30,29 +30,22 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const month = Number(body.month);
-    const year = Number(body.year);
+import { createPayrollRunSchema, CreatePayrollRunInput } from "@/lib/validations/payroll";
 
-    console.log("Payroll creation request:", { month, year, body });
+  const bodyData: CreatePayrollRunInput = await req.json();
+  const data = createPayrollRunSchema.parse(bodyData);
+  const { month, year } = data;
 
-    // Validate input
-    if (!month || !year) {
-      console.error("Validation failed: Month and year are required", { month, year });
-      return errorResponse("Month and year are required", 400);
-    }
-    if (isNaN(month) || isNaN(year) || month < 1 || month > 12 || year < 2000 || year > 2100) {
-      console.error("Validation failed: Invalid month or year", { month, year });
-      return errorResponse("Invalid month (1-12) or year (2000-2100)", 400);
-    }
+  console.log("Payroll creation request:", { month, year, bodyData });
 
-    const existing = await prisma.payrollRun.findUnique({
-      where: { 
-        month_year: { 
-          month: month as any, 
-          year 
-        } 
-      },
-    });
+  const existing = await prisma.payrollRun.findUnique({
+    where: { 
+      month_year: { 
+        month,
+        year 
+      } 
+    },
+  });
 
     if (existing) {
       console.error("Payroll run already exists for period:", { month, year, existingId: existing.id });

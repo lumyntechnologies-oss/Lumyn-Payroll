@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
+import { reviewLeaveRequestSchema } from "@/lib/validations/leave";
 
 export async function POST(
   request: NextRequest,
@@ -22,7 +23,17 @@ export async function POST(
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
     }
 
-    const { reviewNote } = await request.json();
+    const body = await request.json();
+    const validationResult = reviewLeaveRequestSchema.safeParse(body);
+    
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: "Invalid payload", details: validationResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const { reviewNote } = validationResult.data;
     const { id: leaveRequest } = await params;
 
     // Update leave request
