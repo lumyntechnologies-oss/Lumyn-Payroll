@@ -7,7 +7,7 @@ import { checkRoleMiddleware } from "@/lib/middleware/role-check";
  * DELETE /api/payments/methods/[id]
  * Delete payment method
  */
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -15,7 +15,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   if (!roleCheck.valid) return roleCheck.response!;
 
   const context = roleCheck.context!;
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const method = await prisma.paymentMethod.findUnique({
@@ -56,7 +56,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
  * PATCH /api/payments/methods/[id]
  * Update payment method (set primary, verify)
  */
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -64,7 +64,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!roleCheck.valid) return roleCheck.response!;
 
   const context = roleCheck.context!;
-  const { id } = params;
+  const { id } = await params;
   const body = await req.json();
 
   try {

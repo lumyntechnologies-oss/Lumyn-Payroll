@@ -1,6 +1,5 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
-import { Role } from "@/lib/generated/prisma";
 
 export async function getCurrentDbUser() {
   const { userId } = await auth();
@@ -20,7 +19,7 @@ export async function getCurrentDbUser() {
           name:
             `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() ||
             "Super Admin",
-          role: Role.SUPER_ADMIN,
+          role: 'SUPER_ADMIN',
         },
       });
     } else {
@@ -29,17 +28,17 @@ export async function getCurrentDbUser() {
   }
 
   const superAdminId = process.env.SUPER_ADMIN_CLERK_ID;
-  if (superAdminId && userId === superAdminId && user.role !== Role.SUPER_ADMIN) {
+  if (superAdminId && userId === superAdminId && user.role !== 'SUPER_ADMIN') {
     user = await prisma.user.update({
       where: { clerkId: userId },
-      data: { role: Role.SUPER_ADMIN },
+      data: { role: 'SUPER_ADMIN' },
     });
   }
 
   return user;
 }
 
-export async function requireRole(...roles: Role[]) {
+export async function requireRole(roles: string[]) {
   const user = await getCurrentDbUser();
   if (!user) return null;
   if (!roles.includes(user.role)) return null;
@@ -49,3 +48,4 @@ export async function requireRole(...roles: Role[]) {
 export function isSuperAdmin(clerkId: string) {
   return process.env.SUPER_ADMIN_CLERK_ID === clerkId;
 }
+

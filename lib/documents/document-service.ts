@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import { DocumentType } from "@/lib/generated/prisma";
+
+type DocumentType = string;
+
 
 export interface DocumentMetadata {
   name: string;
@@ -77,9 +79,12 @@ export class DocumentService {
         }),
       ]);
 
+      // Sort documents by uploadedAt descending (already handled by Prisma orderBy)
+      const sortedDocuments = documents;
+
       return {
         success: true,
-        documents,
+        documents: sortedDocuments,
         total,
         limit,
         offset,
@@ -206,7 +211,7 @@ export class DocumentService {
           compliance: stats[3],
           policies: stats[4],
           other: stats[5],
-          total: stats.reduce((a, b) => a + b, 0),
+          total: stats.reduce((a: number, b: number) => a + b, 0),
         },
       };
     } catch (error) {
@@ -227,15 +232,18 @@ export class DocumentService {
   }
 
   /**
-   * Search documents
+   * Search documents by name
    */
-  async searchDocuments(query: string, employeeId?: string, limit: number = 20) {
+  async searchDocuments(query: string, employeeId?: string, limit: number = 10): Promise<{
+    success: boolean;
+    documents: any[];
+  }> {
     try {
       const documents = await prisma.document.findMany({
         where: {
           name: {
             contains: query,
-            mode: "insensitive" as any,
+            mode: "insensitive" as const,
           },
           ...(employeeId && { employeeId }),
         },

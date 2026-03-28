@@ -2,10 +2,11 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { successResponse, errorResponse, notFoundResponse, validationError } from "@/lib/api-helpers";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const dept = await prisma.department.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { _count: { select: { employees: true } }, employees: { select: { id: true, firstName: true, lastName: true, jobTitle: true } } },
     });
 
@@ -17,9 +18,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const dept = await prisma.department.findUnique({ where: { id: params.id } });
+    const { id } = await params;
+    const dept = await prisma.department.findUnique({ where: { id } });
     if (!dept) return notFoundResponse("Department");
 
     const body = await req.json();
@@ -30,13 +32,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       if (name.length > 100) return validationError("Department name must not exceed 100 characters", "name");
 
       const existing = await prisma.department.findUnique({ where: { name } });
-      if (existing && existing.id !== params.id) {
+      if (existing && existing.id !== id) {
         return validationError("Department with this name already exists", "name");
       }
     }
 
     const updated = await prisma.department.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name: body.name?.trim(),
         description: body.description?.trim() || null,
@@ -54,10 +56,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const dept = await prisma.department.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { _count: { select: { employees: true } } },
     });
 
@@ -67,7 +70,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return errorResponse(`Cannot delete department with ${dept._count.employees} employees. Reassign employees first.`, 400);
     }
 
-    await prisma.department.delete({ where: { id: params.id } });
+    await prisma.department.delete({ where: { id } });
     return successResponse({ message: "Department deleted successfully" });
   } catch (error) {
     console.error("Department deletion error:", error);

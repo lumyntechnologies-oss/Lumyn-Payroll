@@ -4,7 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -23,7 +23,7 @@ export async function POST(
     }
 
     const { reviewNote } = await request.json();
-    const leaveRequest = params.id;
+    const { id: leaveRequest } = await params;
 
     // Update leave request
     const updated = await prisma.leaveRequest.update({

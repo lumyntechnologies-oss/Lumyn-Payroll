@@ -197,7 +197,8 @@ export default function WalletPage() {
                     <div>
                       <p>{wallet.employee.firstName} {wallet.employee.lastName}</p>
                       <p className="text-sm text-muted-foreground">{wallet.employeeId}</p>
-                    </TableCell>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="font-mono font-semibold text-lg text-green-600">
                       {wallet.balance.toLocaleString()} KES
@@ -231,14 +232,14 @@ export default function WalletPage() {
         </CardHeader>
         <CardContent>
           <Table>
-            <TableHead>
+            <TableHeader>
               <TableRow>
                 <TableHead>Type</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Date</TableHead>
               </TableRow>
-            </TableHead>
+            </TableHeader>
             <TableBody>
               {transactions.map((txn) => (
                 <TableRow key={txn.id}>
@@ -266,4 +267,3 @@ export default function WalletPage() {
     </div>
   );
 }
-
