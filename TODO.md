@@ -1,37 +1,37 @@
-<!-- # Lumyn-Payroll Phase 1 Tracker - Critical Foundation (Security & Data Integrity)
-Updated: $(date +%Y-%m-%d). Approved plan breakdown.
+<!-- # Lumyn-Payroll Phase Roadmap Tracker
+Updated: $(date +%Y-%m-%d)
 
-## 📋 Legend
-- ✅ **Done** 
-- ⏳ **In Progress**
-- 🔄 **Ready**
-- [ ] **Pending**
+## 🎯 Phase 1: Critical Foundation ✅
+Zod validation, rate limiting, indexes, encryption, CSRF.
 
-## 🎯 Phase 1.1: Zod Validation for ALL API Inputs
-- ✅ 1.1.1: Create/expand lib/validations schemas (employees.ts, payroll.ts, attendance.ts, departments.ts, leave.ts)
-- ✅ 1.1.2: Update API routes to use Zod.parse() (employees, payroll/runs, leave/requests, payments, wallet)
-- 🔄 1.1.3: Test key endpoints
+## 🎯 Phase 2: Core Business Logic ✅
+Tax calculations (tested), payroll locking, audit logs.
 
-## 🛡️ Phase 1.2: Rate Limiting on Auth Endpoints
-- ✅ 1.2.1: npm i @upstash/ratelimit @upstash/redis
-- ✅ 1.2.2: Create lib/rate-limit.ts
-- ✅ 1.2.3: Apply to app/api/auth/* routes
+## 🎯 Phase 3: Performance & UX ✅
+React Query (integrated), pagination APIs, skeletons, mobile-first.
 
-## 🗄️ Phase 1.3: Database Indexes & Optimization
-- ✅ 1.3.1: Add composite indexes to schema.prisma
-- 🔄 1.3.2: prisma migrate dev/deploy
+## ✅ Phase 4: Compliance & Reporting
+Priority: Regulatory Requirements
 
-## 🔐 Phase 1.4: Encrypt Sensitive Data
-- ✅ 1.4.1: Create lib/crypto.ts (pg_crypto helpers)
-- 🔄 1.4.2: Update schema.prisma (encrypted fields for bankAccount, kraPin, nationalId)
-- 🔄 1.4.3: Update services/mutations to encrypt/decrypt
+- ✅ 4.1 Automated compliance filing reminders (cron + notifications)
+- 🔄 4.2 Export formats for KRA, NSSF, NHIF (CSV/PDF)
+- [ ] 4.3 Audit reports (PDF generation)
+- [ ] 4.4 Scheduled report generation (email)
 
-## 🔒 Phase 1.5: CSRF Protection
-- 🔄 1.5.1: Verify/implement CSRF tokens for forms
+**Phase 4.2 ✅ KRA/NSSF exports (/api/compliance/export?type=PAYE&year=2024)**
 
-## ✅ Next Steps After Phase 1
-- Full API test suite
-- Phase 2: Payroll tests & locking
 
-**Progress: Ready to start Phase 1.1 → Zod schemas → Update tracker after each step.**
+Priority: Production Readiness
+
+- [ ] 5.1 Structured logging + Sentry
+- [ ] 5.2 Health check endpoints
+- [ ] 5.3 Blue-green deployment
+
+## 🚀 Phase 6: Advanced Features
+Priority: Business Value
+
+- [ ] 6.1 Multi-level approval workflow
+- [ ] 6.2 Advanced analytics dashboard
+
+**Next: Phase 4.1 → cron reminders → test → update tracker**
  -->

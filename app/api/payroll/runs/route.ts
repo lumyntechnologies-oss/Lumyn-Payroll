@@ -1,6 +1,4 @@
-import { NextRequest } from "next/server";
-import prisma from "@/lib/prisma";
-import { EmployeeStatus } from "@/lib/generated/prisma";
+
 import { successResponse, errorResponse } from "@/lib/api-helpers";
 
 export async function GET(req: NextRequest) {
@@ -144,10 +142,7 @@ import { createPayrollRunSchema, CreatePayrollRunInput } from "@/lib/validations
   }
 }
 
-function calculatePAYE(grossMonthly: number): number {
-  const annual = grossMonthly * 12;
-  let tax = 0;
-  const bands = [
+
     { limit: 288000, rate: 0.1 },
     { limit: 100000, rate: 0.25 },
     { limit: Infinity, rate: 0.3 },

@@ -1,4 +1,11 @@
 import prisma from "@/lib/prisma";
+import { NotificationType } from "@/lib/generated/prisma";
+
+export interface CreateNotificationData {
+  title: string;
+  message: string;
+  type?: NotificationType;
+}
 
 export class NotificationService {
   /**
@@ -36,6 +43,34 @@ export class NotificationService {
   }
 
   /**
+   * Create new notification
+   */
+  static async createNotification(data: CreateNotificationData) {
+    try {
+      const notification = await prisma.notification.create({
+        data: {
+          title: data.title,
+          message: data.message,
+          type: data.type || 'INFO',
+          read: false,
+        },
+      });
+
+      console.log("[Notification] Created:", data.title);
+      return {
+        success: true,
+        notification,
+      };
+    } catch (error) {
+      console.error("[Notification] Error creating:", error);
+      return {
+        success: false,
+        message: "Failed to create notification",
+      };
+    }
+  }
+
+  /**
    * Mark notification as read
    */
   static async markAsRead(notificationId: string) {
@@ -54,6 +89,29 @@ export class NotificationService {
       return {
         success: false,
         message: "Failed to mark as read",
+      };
+    }
+  }
+
+  /**
+   * Mark all notifications as read
+   */
+  static async markAllAsRead() {
+    try {
+      const result = await prisma.notification.updateMany({
+        where: { read: false },
+        data: { read: true },
+      });
+
+      return {
+        success: true,
+        markedCount: result.count,
+      };
+    } catch (error) {
+      console.error("[Notification] Error marking all as read:", error);
+      return {
+        success: false,
+        message: "Failed to mark notifications as read",
       };
     }
   }

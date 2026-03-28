@@ -104,6 +104,8 @@ model PayrollRun {
   totalNet    Float          @default(0)
   approvedAt  DateTime?
   disbursedAt DateTime?
+  lockedAt    DateTime?
+  lockedBy    String?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   entries     PayrollEntry[]
