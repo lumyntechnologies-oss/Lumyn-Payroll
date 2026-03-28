@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,9 +27,11 @@ export default function PayrollPage() {
   const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>([]);
 
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [tab, setTab] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [formData, setFormData] = useState({ month: "", year: "" });
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPayrollRuns();
@@ -52,19 +54,28 @@ export default function PayrollPage() {
 
   const createPayrollRun = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
+    setError(null);
     try {
       const res = await fetch("/api/payroll/runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
+      const data = await res.json();
       if (res.ok) {
         setShowCreateDialog(false);
         setFormData({ month: "", year: "" });
         fetchPayrollRuns();
+      } else {
+        // Show error message from API
+        setError(data.error || "Failed to create payroll run");
       }
     } catch (error) {
       console.error("Failed to create payroll run:", error);
+      setError("Failed to create payroll run. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -113,7 +124,10 @@ export default function PayrollPage() {
           </h1>
           <p className="text-muted-foreground">{payrollRuns.length} payroll runs</p>
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <Dialog open={showCreateDialog} onOpenChange={(open) => {
+          setShowCreateDialog(open);
+          if (!open) setError(null);
+        }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="w-4 h-4 mr-2" />
@@ -123,8 +137,14 @@ export default function PayrollPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create New Payroll Run</DialogTitle>
+              <DialogDescription>Create a new payroll run for the specified month and year.</DialogDescription>
             </DialogHeader>
             <form onSubmit={createPayrollRun} className="space-y-4">
+              {error && (
+                <div className="text-sm text-red-600 bg-red-50 p-2 rounded-lg">
+                  {error}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="month">Month</Label>
                 <Select onValueChange={(v) => setFormData({...formData, month: v})} required>
@@ -143,7 +163,9 @@ export default function PayrollPage() {
                 <Input id="year" type="number" min="2024" max="2030" required onChange={(e) => setFormData({...formData, year: e.target.value})} />
               </div>
               <DialogFooter>
-                <Button type="submit">Create Run</Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? "Creating..." : "Create Run"}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>

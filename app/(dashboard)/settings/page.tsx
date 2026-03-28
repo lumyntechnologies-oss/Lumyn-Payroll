@@ -60,6 +60,9 @@ export default function SettingsPage() {
       if (res.ok) {
         const data = await res.json();
         setSettings(data.settings || {});
+      } else if (res.status === 404) {
+        // Employee not found - user may not be onboarded yet
+        setMessage({ type: "error", text: "Employee profile not found. Please complete onboarding first." });
       }
     } catch (error) {
       console.error("Failed to load settings:", error);
@@ -89,6 +92,8 @@ export default function SettingsPage() {
         const data = await res.json();
         setMessage({ type: "success", text: "Notification settings saved" });
         setSettings(data.settings);
+      } else if (res.status === 404) {
+        setMessage({ type: "error", text: "Employee profile not found. Please complete onboarding first." });
       }
     } catch (error) {
       setMessage({ type: "error", text: "Failed to save settings" });
@@ -114,6 +119,8 @@ export default function SettingsPage() {
         const data = await res.json();
         setMessage({ type: "success", text: "Preferences saved" });
         setSettings(data.settings);
+      } else if (res.status === 404) {
+        setMessage({ type: "error", text: "Employee profile not found. Please complete onboarding first." });
       }
     } catch (error) {
       setMessage({ type: "error", text: "Failed to save preferences" });
@@ -128,7 +135,7 @@ export default function SettingsPage() {
       title: "Profile Settings",
       description: "Update your personal information",
       icon: <User className="w-6 h-6" />,
-      href: "/settings/profile",
+      href: "/settings/personal",
       role: "user",
     },
     {

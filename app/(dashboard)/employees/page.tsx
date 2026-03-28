@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { Users, Plus, Search, Edit, Trash2, Loader2 } from "lucide-react";
 
 interface Employee {
@@ -148,6 +149,7 @@ export default function EmployeesPage() {
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Add New Employee</DialogTitle>
+              <DialogDescription>Add a new employee to the system with their details.</DialogDescription>
             </DialogHeader>
             <form onSubmit={addEmployee} className="space-y-3 mt-2">
               <div className="grid grid-cols-2 gap-3">
@@ -231,8 +233,8 @@ export default function EmployeesPage() {
           <CardTitle className="text-sm">Employee List</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {loading ? (
-            <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+{loading ? (
+            <TableSkeleton rows={10} cols={7} />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

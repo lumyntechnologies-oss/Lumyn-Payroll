@@ -1,4 +1,13 @@
 -- CreateEnum
+CREATE TYPE "PaymentType" AS ENUM ('BANK', 'MPESA', 'INTERNATIONAL');
+
+-- CreateEnum
+CREATE TYPE "WalletTransactionType" AS ENUM ('TOPUP', 'WITHDRAWAL', 'DISBURSEMENT', 'REFUND', 'ADJUSTMENT');
+
+-- CreateEnum
+CREATE TYPE "TransactionStatus" AS ENUM ('PENDING', 'PROCESSING', 'SUCCESS', 'FAILED');
+
+-- CreateEnum
 CREATE TYPE "Role" AS ENUM ('SUPER_ADMIN', 'HR_ADMIN', 'FINANCE', 'MANAGER', 'EMPLOYEE');
 
 -- CreateEnum
@@ -84,6 +93,25 @@ CREATE TABLE "employees" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "employees_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "payment_methods" (
+    "id" TEXT NOT NULL,
+    "employeeId" TEXT NOT NULL,
+    "type" "PaymentType" NOT NULL,
+    "bankCode" TEXT,
+    "accountNumber" TEXT,
+    "accountName" TEXT,
+    "mpesaNumber" TEXT,
+    "swiftCode" TEXT,
+    "iban" TEXT,
+    "primary" BOOLEAN NOT NULL DEFAULT false,
+    "verified" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "payment_methods_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -338,6 +366,37 @@ CREATE TABLE "integrations" (
     CONSTRAINT "integrations_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "wallets" (
+    "id" TEXT NOT NULL,
+    "employeeId" TEXT NOT NULL,
+    "balance" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "currency" TEXT NOT NULL DEFAULT 'KES',
+    "lastTopupAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "wallets_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "wallet_transactions" (
+    "id" TEXT NOT NULL,
+    "walletId" TEXT NOT NULL,
+    "type" "WalletTransactionType" NOT NULL,
+    "amount" DOUBLE PRECISION NOT NULL,
+    "balanceBefore" DOUBLE PRECISION NOT NULL,
+    "balanceAfter" DOUBLE PRECISION NOT NULL,
+    "status" "TransactionStatus" NOT NULL DEFAULT 'PENDING',
+    "paymentReference" TEXT,
+    "pesapalReference" TEXT,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "wallet_transactions_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
@@ -358,6 +417,9 @@ CREATE UNIQUE INDEX "employees_nationalId_key" ON "employees"("nationalId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "employees_kraPin_key" ON "employees"("kraPin");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payment_methods_employeeId_primary_key" ON "payment_methods"("employeeId", "primary");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "payroll_runs_month_year_key" ON "payroll_runs"("month", "year");
@@ -395,8 +457,14 @@ CREATE UNIQUE INDEX "role_permissions_role_resource_action_key" ON "role_permiss
 -- CreateIndex
 CREATE UNIQUE INDEX "integrations_name_key" ON "integrations"("name");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "wallets_employeeId_key" ON "wallets"("employeeId");
+
 -- AddForeignKey
 ALTER TABLE "employees" ADD CONSTRAINT "employees_departmentId_fkey" FOREIGN KEY ("departmentId") REFERENCES "departments"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payment_methods" ADD CONSTRAINT "payment_methods_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "employees"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "payroll_entries" ADD CONSTRAINT "payroll_entries_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -424,3 +492,9 @@ ALTER TABLE "salary_advances" ADD CONSTRAINT "salary_advances_employeeId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "documents" ADD CONSTRAINT "documents_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "employees"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "wallets" ADD CONSTRAINT "wallets_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "employees"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "wallet_transactions" ADD CONSTRAINT "wallet_transactions_walletId_fkey" FOREIGN KEY ("walletId") REFERENCES "wallets"("id") ON DELETE CASCADE ON UPDATE CASCADE;

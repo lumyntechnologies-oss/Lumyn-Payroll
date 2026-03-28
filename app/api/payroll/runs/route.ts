@@ -33,11 +33,15 @@ export async function POST(req: NextRequest) {
     const month = Number(body.month);
     const year = Number(body.year);
 
+    console.log("Payroll creation request:", { month, year, body });
+
     // Validate input
     if (!month || !year) {
+      console.error("Validation failed: Month and year are required", { month, year });
       return errorResponse("Month and year are required", 400);
     }
     if (isNaN(month) || isNaN(year) || month < 1 || month > 12 || year < 2000 || year > 2100) {
+      console.error("Validation failed: Invalid month or year", { month, year });
       return errorResponse("Invalid month (1-12) or year (2000-2100)", 400);
     }
 
@@ -51,6 +55,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (existing) {
+      console.error("Payroll run already exists for period:", { month, year, existingId: existing.id });
       return errorResponse("Payroll run already exists for this period", 400);
     }
 
@@ -60,6 +65,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (employees.length === 0) {
+      console.error("No active employees found for payroll");
       return errorResponse("No active employees found for payroll", 400);
     }
 

@@ -8,6 +8,8 @@ const TABS: { name: string; title: string; icon: IconName; activeIcon: IconName 
   { name: "employees", title: "Employees", icon: "people-outline", activeIcon: "people" },
   { name: "payroll", title: "Payroll", icon: "cash-outline", activeIcon: "cash" },
   { name: "leave", title: "Leave", icon: "calendar-outline", activeIcon: "calendar" },
+  { name: "attendance", title: "Attendance", icon: "time-outline", activeIcon: "time" },
+  { name: "wallet", title: "Wallet", icon: "wallet-outline", activeIcon: "wallet" },
   { name: "profile", title: "Profile", icon: "person-outline", activeIcon: "person" },
 ];
 

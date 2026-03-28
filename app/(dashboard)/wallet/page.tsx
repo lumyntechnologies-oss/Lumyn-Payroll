@@ -1,292 +1,269 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, Plus, ArrowDownRight, ArrowUpLeft, RefreshCw } from "lucide-react";
-import Link from "next/link";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CreditCard, Wallet, Plus, ArrowUpRight, ArrowDownRight, Loader2, RefreshCw } from "lucide-react";
 
-interface WalletBalance {
-  walletId: string;
+interface Wallet {
+  id: string;
+  employeeId: string;
+  employee: {
+    firstName: string;
+    lastName: string;
+  };
   balance: number;
   currency: string;
-  lastTopupAt?: string;
-  employeeId: string;
-  employeeName: string;
+  lastTopupAt: string | null;
 }
 
 interface Transaction {
   id: string;
-  type: "TOPUP" | "WITHDRAWAL" | "DISBURSEMENT" | "REFUND" | "ADJUSTMENT";
+  walletId: string;
+  type: string;
   amount: number;
-  status: "PENDING" | "PROCESSING" | "SUCCESS" | "FAILED";
-  description?: string;
+  status: string;
+  description: string;
   createdAt: string;
-  balanceBefore: number;
-  balanceAfter: number;
 }
 
 export default function WalletPage() {
-  const [balance, setBalance] = useState<WalletBalance | null>(null);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [topupLoading, setTopupLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [topupAmount, setTopupAmount] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showTopupDialog, setShowTopupDialog] = useState(false);
+  const [selectedWalletId, setSelectedWalletId] = useState('');
+  const [topupAmount, setTopupAmount] = useState('');
+  const [topupSubmitting, setTopupSubmitting] = useState(false);
 
   useEffect(() => {
-    fetchWalletData();
-
-    // Check for callback status in URL
-    const params = new URLSearchParams(window.location.search);
-    const status = params.get("status");
-    if (status) {
-      const message = params.get("message") || "";
-      if (status === "success") {
-        setError(`✓ ${message}`);
-        setTimeout(() => fetchWalletData(), 1000);
-      } else {
-        setError(`✗ ${message}`);
-      }
-      // Clean URL
-      window.history.replaceState({}, "", window.location.pathname);
-    }
+    fetchWallets();
+    fetchTransactions();
   }, []);
 
-  const fetchWalletData = async () => {
+  const fetchWallets = async () => {
     try {
-      setLoading(true);
-      const [balanceRes, transactionsRes] = await Promise.all([
-        fetch("/api/wallet/balance"),
-        fetch("/api/wallet/transactions?limit=10"),
-      ]);
-
-      if (!balanceRes.ok || !transactionsRes.ok) {
-        throw new Error("Failed to fetch data");
-      }
-
-      const balanceData = await balanceRes.json();
-      const transactionsData = await transactionsRes.json();
-
-      setBalance(balanceData);
-      setTransactions(transactionsData.transactions);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load wallet");
+      const res = await fetch('/api/wallet/balance');
+      const data = await res.json();
+      setWallets(data.wallets || data || []);
+    } catch (error) {
+      console.error('Failed to fetch wallets:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleTopup = async () => {
-    if (!topupAmount || parseFloat(topupAmount) <= 0) {
-      setError("Please enter a valid amount");
-      return;
-    }
-
+  const fetchTransactions = async () => {
     try {
-      setTopupLoading(true);
-      const response = await fetch("/api/wallet/topup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: parseFloat(topupAmount) }),
+      const res = await fetch('/api/wallet/transactions?limit=10');
+      const data = await res.json();
+      setTransactions(data.transactions || []);
+    } catch (error) {
+      console.error('Failed to fetch transactions:', error);
+    }
+  };
+
+  const handleTopup = async () => {
+    if (!selectedWalletId || !topupAmount) return;
+
+    setTopupSubmitting(true);
+    try {
+      const res = await fetch('/api/wallet/topup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletId: selectedWalletId, amount: parseFloat(topupAmount) }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to initiate topup");
+      if (res.ok) {
+        setShowTopupDialog(false);
+        setTopupAmount('');
+        fetchWallets();
+        fetchTransactions();
       }
-
-      const data = await response.json();
-      // Redirect to Pesapal payment portal
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Topup failed");
+    } catch (error) {
+      console.error('Topup failed:', error);
     } finally {
-      setTopupLoading(false);
+      setTopupSubmitting(false);
     }
   };
 
-  const getTransactionIcon = (type: Transaction["type"]) => {
-    switch (type) {
-      case "TOPUP":
-        return <ArrowUpLeft className="w-4 h-4 text-green-600" />;
-      case "WITHDRAWAL":
-      case "DISBURSEMENT":
-        return <ArrowDownRight className="w-4 h-4 text-red-600" />;
-      case "REFUND":
-        return <RefreshCw className="w-4 h-4 text-blue-600" />;
-      default:
-        return <CreditCard className="w-4 h-4 text-gray-600" />;
-    }
-  };
-
-  const getStatusBadge = (status: Transaction["status"]) => {
-    const variants: Record<Transaction["status"], "default" | "secondary" | "destructive"> = {
-      PENDING: "secondary",
-      PROCESSING: "secondary",
-      SUCCESS: "default",
-      FAILED: "destructive",
-    };
-    return <Badge variant={variants[status]}>{status}</Badge>;
-  };
+  const filteredWallets = wallets.filter(w => 
+    `${w.employee.firstName} ${w.employee.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    w.employeeId.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2" />
-          <p>Loading wallet...</p>
-        </div>
-      </div>
-    );
+    return <div className="p-8 text-center">Loading wallets...</div>;
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">My Wallet</h1>
-          <p className="text-gray-600">Manage your wallet and view transactions</p>
+          <h1 className="text-3xl font-bold tracking-tight">Wallets</h1>
+          <p className="text-muted-foreground">Employee wallet balances and transaction history</p>
         </div>
-        <CreditCard className="w-8 h-8 text-primary" />
       </div>
 
-      {error && (
-        <div className={`p-4 rounded-lg ${error.startsWith("✓") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
-          {error}
-        </div>
-      )}
-
-      {/* Balance Card */}
-      {balance && (
-        <Card className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-          <CardHeader>
-            <CardTitle>Wallet Balance</CardTitle>
-            <CardDescription className="text-blue-100">
-              {balance.lastTopupAt ? `Last top-up: ${new Date(balance.lastTopupAt).toLocaleDateString()}` : "No top-ups yet"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm font-medium text-blue-100">Available Balance</p>
-              <p className="text-4xl font-bold mt-2">
-                {balance.currency} {balance.balance.toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Top-up Section */}
+      {/* Search */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            Add Money to Wallet
-          </CardTitle>
-          <CardDescription>Fund your wallet using Pesapal (Bank Transfer)</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Amount (KES)</label>
-            <input
-              type="number"
-              min="100"
-              step="100"
-              value={topupAmount}
-              onChange={(e) => setTopupAmount(e.target.value)}
-              placeholder="Enter amount (minimum 100 KES)"
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <CardContent className="p-6">
+          <div className="relative">
+            <Wallet className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search wallets by name or employee ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-12"
             />
-            <p className="text-sm text-gray-600 mt-2">
-              Minimum: 100 KES | Maximum: 1,000,000 KES
-            </p>
-          </div>
-
-          <Button
-            onClick={handleTopup}
-            disabled={topupLoading || !topupAmount}
-            className="w-full"
-          >
-            {topupLoading ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <CreditCard className="w-4 h-4 mr-2" />
-                Top-up with Pesapal
-              </>
-            )}
-          </Button>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-900">
-              <strong>How it works:</strong> Click "Top-up with Pesapal" and you'll be redirected to Pesapal's secure payment page where you can complete the transaction using your bank account.
-            </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Transactions History */}
+      {/* Wallets Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Transaction History</CardTitle>
-          <CardDescription>Your recent wallet transactions</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardTitle className="text-lg font-semibold">Wallet Balances</CardTitle>
+          <Dialog open={showTopupDialog} onOpenChange={setShowTopupDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Top-up Wallet
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Top-up Wallet</DialogTitle>
+                <DialogDescription>Enter amount to top-up selected wallet</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div>
+                  <Label>Amount (KES)</Label>
+                  <Input
+                    type="number"
+                    placeholder="1000"
+                    value={topupAmount}
+                    onChange={(e) => setTopupAmount(e.target.value)}
+                    min="100"
+                  />
+                </div>
+                <Select value={selectedWalletId} onValueChange={setSelectedWalletId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select wallet" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {wallets.map((wallet) => (
+                      <SelectItem key={wallet.id} value={wallet.id}>
+                        {wallet.employee.firstName} {wallet.employee.lastName} - Current: {wallet.balance} KES
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setShowTopupDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleTopup} disabled={topupSubmitting || !topupAmount}>
+                  {topupSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Top-up
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </CardHeader>
         <CardContent>
-          {transactions.length === 0 ? (
-            <div className="text-center py-8">
-              <CreditCard className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-              <p className="text-gray-600">No transactions yet</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {transactions.map((txn) => (
-                <div key={txn.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                  <div className="flex items-center gap-3 flex-1">
-                    {getTransactionIcon(txn.type)}
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableHead>Employee</TableHead>
+                <TableHead>Balance</TableHead>
+                <TableHead>Currency</TableHead>
+                <TableHead>Last Activity</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredWallets.map((wallet) => (
+                <TableRow key={wallet.id}>
+                  <TableCell className="font-medium">
                     <div>
-                      <p className="font-medium capitalize">{txn.type.toLowerCase()}</p>
-                      <p className="text-sm text-gray-600">{txn.description || new Date(txn.createdAt).toLocaleDateString()}</p>
+                      <p>{wallet.employee.firstName} {wallet.employee.lastName}</p>
+                      <p className="text-sm text-muted-foreground">{wallet.employeeId}</p>
+                    </TableCell>
+                  <TableCell>
+                    <div className="font-mono font-semibold text-lg text-green-600">
+                      {wallet.balance.toLocaleString()} KES
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className={`font-semibold ${txn.type === "TOPUP" || txn.type === "REFUND" ? "text-green-600" : "text-red-600"}`}>
-                      {txn.type === "TOPUP" || txn.type === "REFUND" ? "+" : "-"}
-                      {txn.amount.toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} KES
-                    </p>
-                    {getStatusBadge(txn.status)}
-                  </div>
-                </div>
+                  </TableCell>
+                  <TableCell>{wallet.currency}</TableCell>
+                  <TableCell>
+                    {wallet.lastTopupAt ? new Date(wallet.lastTopupAt).toLocaleDateString() : '—'}
+                  </TableCell>
+                  <TableCell>
+                    <Badge>Active</Badge>
+                  </TableCell>
+                </TableRow>
               ))}
-            </div>
-          )}
+              {filteredWallets.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center">
+                    No wallets found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
-      {/* Help Section */}
+      {/* Recent Transactions */}
       <Card>
         <CardHeader>
-          <CardTitle>Need Help?</CardTitle>
+          <CardTitle>Recent Transactions</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <Link href="/help/wallet">
-            <Button variant="outline" className="w-full justify-start">
-              View Wallet FAQ
-            </Button>
-          </Link>
-          <Link href="/support">
-            <Button variant="outline" className="w-full justify-start">
-              Contact Support
-            </Button>
-          </Link>
+        <CardContent>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableHead>Type</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Date</TableHead>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {transactions.map((txn) => (
+                <TableRow key={txn.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {txn.type === 'TOPUP' ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+                      <span className="capitalize">{txn.type.toLowerCase()}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-mono font-semibold">
+                    {txn.amount.toLocaleString()} KES
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={txn.status === 'SUCCESS' ? 'default' : 'secondary'}>
+                      {txn.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{new Date(txn.createdAt).toLocaleDateString()}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
   );
 }
+
